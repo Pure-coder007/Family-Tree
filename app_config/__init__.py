@@ -12,8 +12,18 @@ def create_app(config_name="development"):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
-    cors.init_app(app, resources={r"*": {"origins": "*"}})
+    cors.init_app(
+        app,
+        resources={
+            r"/api/*": {
+                "origins": "*",
+                "methods": ["GET", "POST", "PATCH", "PUT", "DELETE"],
+                "allow_headers": ["Authorization", "Content-Type"],
+                "supports_credentials": True,
+            }
+        },
+    )
     
-    app.register_blueprint(AuthBlp)
+    app.register_blueprint(AuthBlp, url_prefix="/api/v1")
     
     return app
