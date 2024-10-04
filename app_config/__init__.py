@@ -2,6 +2,9 @@ from flask import Flask
 from extensions import jwt, cors, db, migrate
 from config import config_obj
 from endpoints import AuthBlp
+from http_status import HttpStatus
+from status_res import StatusRes
+from utils import return_response
 
 
 def create_app(config_name="development"):
@@ -23,6 +26,34 @@ def create_app(config_name="development"):
             }
         },
     )
+
+    # if endpoint does not exist
+    @app.errorhandler(404)
+    def not_found(error):
+        print("error: ", error)
+        return return_response(
+            HttpStatus.NOT_FOUND,
+            status=StatusRes.FAILED,
+            message="Endpoint not found"
+        )
+
+    @app.errorhandler(405)
+    def method_not_allowed(error):
+        print("error: ", error)
+        return return_response(
+            HttpStatus.METHOD_NOT_ALLOWED,
+            status=StatusRes.FAILED,
+            message="Method not allowed"
+        )
+
+    @app.errorhandler(500)
+    def internal_server_error(error):
+        print("error: ", error)
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
     
     app.register_blueprint(AuthBlp, url_prefix="/api/v1")
     
