@@ -55,6 +55,12 @@ def create_app(config_name="development"):
             status=StatusRes.FAILED,
             message="Network Error"
         )
+        
+    # user loader
+    @jwt.user_lookup_loader
+    def user_lookup_callback(_jwt_header, jwt_data):
+        user_id = jwt_data["sub"]
+        return User.query.get(user_id)
     
     app.register_blueprint(AuthBlp, url_prefix="/api/v1")
     
