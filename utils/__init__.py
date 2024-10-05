@@ -1,6 +1,11 @@
 from flask import jsonify
 from flask_jwt_extended import create_access_token
 import random
+import uuid
+
+
+def hex_uuid():
+    return str(uuid.uuid4().hex)
 
 
 def return_response(status_code, status=None, message=None, **data):
