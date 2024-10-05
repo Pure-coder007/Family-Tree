@@ -88,7 +88,7 @@ def forget_password():
 
 
 # reset password
-@auth.route(f"{AUTH_URL_PREFIX}/reset-password/<email>", methods=["POST"])
+@auth.route(f"{AUTH_URL_PREFIX}/reset-password/<email>", methods=["PATCH"])
 def reset_password(email):
     try:
         data = request.get_json()
