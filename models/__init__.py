@@ -17,6 +17,7 @@ class User(db.Model):
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     gender = db.Column(SQLAlchemyEnum(Gender))
+    is_super_admin = db.Column(db.Boolean, default=False)
     password = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
@@ -62,9 +63,9 @@ def create_user(email, password, first_name, last_name, gender):
 
 def verify_user_login(email, password):
     user = User.query.filter_by(email=email).first()
-    if not user:
-        return False
-    return hasher.verify(password, user.password)
+    if user and hasher.verify(password, user.password):
+        return user
+    return False
 
 
 def create_otp_token(user_id, otp=None, token=None):

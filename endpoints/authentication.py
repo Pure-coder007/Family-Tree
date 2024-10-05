@@ -1,10 +1,10 @@
 from http_status import HttpStatus
 from status_res import StatusRes
 from flask import Blueprint, request
-from utils import return_response, generate_otp
-from models import get_user_by_email, valid_email, create_otp_token
 import traceback
 from datetime import datetime
+from utils import return_response, return_access_token, generate_otp
+from models import verify_user_login, get_user_by_email, valid_email, create_otp_token
 
 auth = Blueprint('auth', __name__)
 
@@ -21,9 +21,32 @@ def test_endpoint():
 # login
 @auth.route(f"{AUTH_URL_PREFIX}/login", methods=["POST"])
 def login():
-    return return_response(
-        HttpStatus.OK, status=StatusRes.SUCCESS, message="Login successful"
-    )
+    try:
+        email = request.json.get("email")
+        password = request.json.get("password")
+        if not email or not password:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Email and password are required"
+            )
+        user = verify_user_login(email, password)
+        if not user:
+            return return_response(
+                HttpStatus.UNAUTHORIZED,
+                status=StatusRes.FAILED,
+                message="Invalid credentials"
+            )
+        access_token = return_access_token(user.id)
+        return return_response(
+                HttpStatus.OK, status=StatusRes.SUCCESS, message="Login successful", access_token=access_token
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "login traceback")
+        print(e, "login error")
+        return return_response(
+            HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid data"
+        )
 
 
 # forget password
