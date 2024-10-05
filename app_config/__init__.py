@@ -1,7 +1,7 @@
 from flask import Flask
 from extensions import jwt, cors, db, migrate
 from config import config_obj
-from endpoints import AuthBlp
+from endpoints import AuthBlp, AccountBlp
 from http_status import HttpStatus
 from status_res import StatusRes
 from utils import return_response
@@ -63,5 +63,6 @@ def create_app(config_name="development"):
         return User.query.get(user_id)
     
     app.register_blueprint(AuthBlp, url_prefix="/api/v1")
+    app.register_blueprint(AccountBlp, url_prefix="/api/v1")
     
     return app
