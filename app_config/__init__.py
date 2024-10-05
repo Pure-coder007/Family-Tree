@@ -5,6 +5,7 @@ from endpoints import AuthBlp
 from http_status import HttpStatus
 from status_res import StatusRes
 from utils import return_response
+from models import User
 
 
 def create_app(config_name="development"):
