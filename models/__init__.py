@@ -3,6 +3,7 @@ from enum import Enum
 from passlib.hash import pbkdf2_sha256 as hasher
 from sqlalchemy import Enum as SQLAlchemyEnum
 import re
+import datetime
 
 
 class Gender(Enum):
@@ -32,6 +33,7 @@ class User(db.Model):
 
     def update_password(self, new_password):
         self.password = hasher.hash(new_password)
+        db.session.commit()
 
     @staticmethod
     def validate_email(email):
@@ -73,10 +75,10 @@ def create_otp_token(user_id, otp=None, token=None):
         user_session = UserSession.query.filter_by(user_id=user_id).first()
         if user_session:
             user_session.otp = otp
-            user_session.otp_expires_at = db.func.now() + db.func.interval(10, "minute")
+            user_session.otp_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, otp=otp, otp_expires_at=db.func.now() + db.func.interval(10, "minute"))
+            user_session = UserSession(user_id=user_id, otp=otp, otp_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
@@ -84,10 +86,10 @@ def create_otp_token(user_id, otp=None, token=None):
         user_session = UserSession.query.filter_by(user_id=user_id).first()
         if user_session:
             user_session.token = token
-            user_session.token_expires_at = db.func.now() + db.func.interval(1, "day")
+            user_session.token_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, token=token, token_expires_at=db.func.now() + db.func.interval(1, "day"))
+            user_session = UserSession(user_id=user_id, token=token, token_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
