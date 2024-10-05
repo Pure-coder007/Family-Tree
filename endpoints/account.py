@@ -71,11 +71,11 @@ def create_user():
                     message=f"{key} is required"
                 )
 
-        if data.get("gender") not in ("M", "F"):
+        if data.get("gender") not in ("male", "female"):
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="Gender must be either M or F"
+                message="Gender must be either male or female"
             )
 
         if email_or_phone_exists(email=data.get("email")):

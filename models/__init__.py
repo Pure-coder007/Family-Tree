@@ -8,8 +8,8 @@ from utils import hex_uuid
 
 
 class Gender(Enum):
-    M = "Male"
-    F = "Female"
+    male = "Male"
+    female = "Female"
 
 
 class RelationshipType(Enum):
@@ -64,7 +64,7 @@ class User(db.Model):
         self.password = hasher.hash(password)
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
-        self.gender = Gender(gender.upper())
+        self.gender = Gender(gender.lower())
         self.is_super_admin = is_super_admin
         self.family_name = family_name
         self.img_str = img_str
