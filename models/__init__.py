@@ -36,6 +36,9 @@ class FamilyName(db.Model):
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
     name = db.Column(db.String(50), nullable=False)
 
+    def __init__(self, name):
+        self.name = name.lower()
+
 
 class User(db.Model):
     __tablename__ = "users"
@@ -60,7 +63,7 @@ class User(db.Model):
         self.password = hasher.hash(password)
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
-        self.gender = Gender(gender)
+        self.gender = Gender(gender.upper())
         self.is_super_admin = is_super_admin
         self.family_name = family_name
         self.img_str = img_str
@@ -130,7 +133,8 @@ def create_otp_token(user_id, otp=None, token=None):
             user_session.otp_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, otp=otp, otp_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+            user_session = UserSession(user_id=user_id, otp=otp,
+                                       otp_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
@@ -141,7 +145,8 @@ def create_otp_token(user_id, otp=None, token=None):
             user_session.token_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, token=token, token_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+            user_session = UserSession(user_id=user_id, token=token,
+                                       token_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
@@ -155,3 +160,28 @@ def get_user_by_email(email):
 
 def valid_email(email):
     return User.validate_email(email)
+
+
+def create_family_name(name):
+    fam = FamilyName.query.filter(
+        FamilyName.name.ilike(name)
+    ).first()
+    if fam:
+        return fam
+    family_name = FamilyName(name=name)
+    db.session.add(family_name)
+    db.session.commit()
+    return family_name
+
+
+def get_family_names():
+    family_names = FamilyName.query.all()
+    return [{"id": fam.id, "name": fam.name.title()} for fam in family_names]
+
+
+def email_or_phone_exists(email=None, phone_number=None):
+    if email:
+        return User.query.filter_by(email=email.lower()).first()
+    if phone_number:
+        return User.query.filter_by(phone_number=phone_number).first()
+    return None
