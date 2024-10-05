@@ -35,7 +35,7 @@ class FamilyName(db.Model):
     __tablename__ = "family_names"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
     name = db.Column(db.String(50), nullable=False)
-    users = db.relationship("User", backref="family_name", lazy=True)
+    users = db.relationship("User", backref="fam_name", lazy=True)
 
     def __init__(self, name):
         self.name = name.lower()
