@@ -1,5 +1,6 @@
 from flask import jsonify
 from flask_jwt_extended import create_access_token
+import random
 
 
 def return_response(status_code, status=None, message=None, **data):
@@ -15,3 +16,7 @@ def return_response(status_code, status=None, message=None, **data):
 def return_access_token(identity):
     access_token = create_access_token(identity=identity)
     return access_token
+
+
+def generate_otp():
+    return str(random.randint(100000, 999999))
