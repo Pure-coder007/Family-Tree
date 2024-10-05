@@ -5,7 +5,7 @@ from endpoints import AuthBlp, AccountBlp
 from http_status import HttpStatus
 from status_res import StatusRes
 from utils import return_response
-from models import User
+from models import User, UserSession, FamilyName, Relationship, Child
 
 
 def create_app(config_name="development"):
