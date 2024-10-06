@@ -64,7 +64,7 @@ class User(db.Model):
         self.password = hasher.hash(password)
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
-        self.gender = Gender(gender.lower())
+        self.gender = Gender(gender.title())
         self.is_super_admin = is_super_admin
         self.family_name = family_name
         self.img_str = img_str
