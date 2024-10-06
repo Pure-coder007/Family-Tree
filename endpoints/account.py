@@ -4,16 +4,17 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 import traceback
 from utils import return_response
-from models import get_family_names, create_family_name, create_user, email_or_phone_exists
+from models import (get_family_names, create_family_name,
+                    create_user, email_or_phone_exists, get_all_users)
 from decorators import super_admin_required
 
 account = Blueprint('account', __name__)
 
-AUTH_URL_PREFIX = "/account"
+ACCOUNT_URL_PREFIX = "/account"
 
 
 # dashboard
-@account.route(f"{AUTH_URL_PREFIX}/dashboard", methods=["GET"])
+@account.route(f"{ACCOUNT_URL_PREFIX}/dashboard", methods=["GET"])
 @jwt_required()
 def dashboard():
     try:
@@ -31,7 +32,7 @@ def dashboard():
 
 
 # get family names
-@account.route(f"{AUTH_URL_PREFIX}/family-names", methods=["GET"])
+@account.route(f"{ACCOUNT_URL_PREFIX}/family-names", methods=["GET"])
 @jwt_required()
 @super_admin_required
 def family_names():
@@ -51,7 +52,7 @@ def family_names():
 
 
 # create user
-@account.route(f"{AUTH_URL_PREFIX}/create-user", methods=["POST"])
+@account.route(f"{ACCOUNT_URL_PREFIX}/create-user", methods=["POST"])
 @jwt_required()
 @super_admin_required
 def create_fam_user():
@@ -59,7 +60,8 @@ def create_fam_user():
         data = request.get_json()
 
         # Define required and optional fields
-        required_fields = ["email", "password", "first_name", "last_name", "gender", "img_str", "phone_number"]
+        required_fields = ["email", "password", "first_name", "last_name",
+                           "gender", "img_str", "phone_number", "dob"]
         optional_fields = {
             "is_super_admin": False,
             "family_name": None,
@@ -128,7 +130,10 @@ def create_fam_user():
             img_str=data.get("img_str"),
             is_super_admin=data.get("is_super_admin", False),
             family_name=fam.id if fam_name else family_id,
-            phone_number=data.get("phone_number")
+            phone_number=data.get("phone_number"),
+            dob=data.get("dob"),
+            status=data.get("status", "Alive"),
+            deceased_at=data.get("deceased_at")
         )
 
         return return_response(
@@ -147,8 +152,38 @@ def create_fam_user():
         )
 
 
+# get all users
+@account.route(f"{ACCOUNT_URL_PREFIX}/all-users", methods=["GET"])
+@jwt_required()
+def all_users():
+    try:
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 10))
+        fullname = request.args.get("fullname")
+        email = request.args.get("email")
+        family_id = request.args.get("family_id")
+        users = get_all_users(page, per_page, fullname, email, family_id)
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="All users retrieved", data={
+                "users": [user.to_dict() for user in users.items],
+                "total_items": users.total,
+                "page": users.page,
+                "per_page": users.per_page,
+                "total_pages": users.pages,
+            }
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "all users traceback")
+        print(e, "all users error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
 # change password
-@account.route(f"{AUTH_URL_PREFIX}/change-password", methods=["PATCH"])
+@account.route(f"{ACCOUNT_URL_PREFIX}/change-password", methods=["PATCH"])
 @jwt_required()
 def change_password():
     try:
