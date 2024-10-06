@@ -4,6 +4,9 @@ from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 import traceback
 from utils import return_response
+from passlib.hash import pbkdf2_sha256 as hasher
+from models import User, UserSession
+
 
 account = Blueprint('account', __name__)
 
@@ -31,7 +34,7 @@ def dashboard():
 def create_user():
     try:
         data = request.get_json()
-
+        
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="User created"
         )
@@ -50,6 +53,9 @@ def create_user():
 def change_password():
     try:
         data = request.get_json()
+        
+        
+        
 
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="Password changed"
