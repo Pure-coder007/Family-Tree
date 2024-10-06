@@ -118,7 +118,7 @@ def create_fam_user():
             )
 
         try:
-            dob = datetime.datetime.strptime(data.get("dob"), "%m-%d-%Y")
+            dob = datetime.datetime.strptime(data.get("dob"), "%d-%m-%Y")
             if dob > datetime.datetime.now():
                 return return_response(
                     HttpStatus.BAD_REQUEST,
@@ -127,7 +127,7 @@ def create_fam_user():
                 )
 
             if data.get("deceased_at"):
-                data["deceased_at"] = datetime.datetime.strptime(data.get("deceased_at"), "%m-%d-%Y")
+                data["deceased_at"] = datetime.datetime.strptime(data.get("deceased_at"), "%d-%m-%Y")
                 if data.get("deceased_at") > datetime.datetime.now():
                     return return_response(
                         HttpStatus.BAD_REQUEST,
@@ -138,7 +138,7 @@ def create_fam_user():
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="Invalid date format, should be MM-DD-YYYY"
+                message="Invalid date format, should be DD-MM-YYYY"
             )
 
         # Create family name if provided
