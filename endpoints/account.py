@@ -24,7 +24,9 @@ def dashboard():
         print(traceback.format_exc(), "dashboard traceback")
         print(e, "dashboard error")
         return return_response(
-            HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid data"
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
         )
 
 
@@ -42,7 +44,9 @@ def family_names():
         print(traceback.format_exc(), "family names traceback")
         print(e, "family names error")
         return return_response(
-            HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid data"
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
         )
 
 
@@ -50,7 +54,7 @@ def family_names():
 @account.route(f"{AUTH_URL_PREFIX}/create-user", methods=["POST"])
 @jwt_required()
 @super_admin_required
-def create_user():
+def create_fam_user():
     try:
         data = request.get_json()
 
@@ -71,11 +75,11 @@ def create_user():
                     message=f"{key} is required"
                 )
 
-        if data.get("gender") not in ("male", "female"):
+        if data.get("gender") not in ("Male", "Female"):
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="Gender must be either male or female"
+                message="Gender must be either Male or Female"
             )
 
         if email_or_phone_exists(email=data.get("email")):
@@ -137,9 +141,9 @@ def create_user():
         print(traceback.format_exc(), "create user traceback")
         print(e, "create user error")
         return return_response(
-            HttpStatus.BAD_REQUEST,
+            HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
-            message="Invalid data"
+            message="Network Error"
         )
 
 
@@ -158,5 +162,7 @@ def change_password():
         print(traceback.format_exc(), "change password traceback")
         print(e, "change password error")
         return return_response(
-            HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid data"
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
         )
