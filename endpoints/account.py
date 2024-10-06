@@ -7,6 +7,7 @@ from utils import return_response
 from models import (get_family_names, create_family_name,
                     create_user, email_or_phone_exists, get_all_users)
 from decorators import super_admin_required
+import datetime
 
 account = Blueprint('account', __name__)
 
@@ -116,6 +117,30 @@ def create_fam_user():
                 message="You can't select family name and provide a new one"
             )
 
+        try:
+            dob = datetime.datetime.strptime(data.get("dob"), "%m-%d-%Y")
+            if dob > datetime.datetime.now():
+                return return_response(
+                    HttpStatus.BAD_REQUEST,
+                    status=StatusRes.FAILED,
+                    message="Date of birth cannot be in the future"
+                )
+
+            if data.get("deceased_at"):
+                data["deceased_at"] = datetime.datetime.strptime(data.get("deceased_at"), "%m-%d-%Y")
+                if data.get("deceased_at") > datetime.datetime.now():
+                    return return_response(
+                        HttpStatus.BAD_REQUEST,
+                        status=StatusRes.FAILED,
+                        message="Deceased date cannot be in the future"
+                    )
+        except ValueError:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Invalid date format, should be MM-DD-YYYY"
+            )
+
         # Create family name if provided
         if fam_name:
             fam = create_family_name(fam_name)
@@ -131,7 +156,7 @@ def create_fam_user():
             is_super_admin=data.get("is_super_admin", False),
             family_name=fam.id if fam_name else family_id,
             phone_number=data.get("phone_number"),
-            dob=data.get("dob"),
+            dob=dob,
             status=data.get("status", "Alive"),
             deceased_at=data.get("deceased_at")
         )
