@@ -45,7 +45,9 @@ def login():
         print(traceback.format_exc(), "login traceback")
         print(e, "login error")
         return return_response(
-            HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid data"
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
         )
 
 
@@ -83,7 +85,9 @@ def forget_password():
         print(traceback.format_exc(), "forget_password traceback")
         print(e, "forget_password error")
         return return_response(
-            HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid data"
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
         )
 
 
@@ -140,5 +144,7 @@ def reset_password(email):
         print(traceback.format_exc(), "reset_password traceback")
         print(e, "reset_password error")
         return return_response(
-            HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid data"
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
         )
