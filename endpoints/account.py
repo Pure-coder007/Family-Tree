@@ -117,6 +117,27 @@ def create_fam_user():
                 message="You can't select family name and provide a new one"
             )
 
+        if data.get("status") == "Deceased" and not data.get("deceased_at"):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Deceased date is required"
+            )
+
+        if data.get("status") == "Alive" and data.get("deceased_at"):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Deceased date is not required"
+            )
+
+        if data.get("deceased_at") and data.get("status") != "Deceased":
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Deceased date is only allowed for deceased users"
+            )
+
         try:
             dob = datetime.datetime.strptime(data.get("dob"), "%d-%m-%Y")
             if dob > datetime.datetime.now():
