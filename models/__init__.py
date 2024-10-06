@@ -235,12 +235,7 @@ def get_all_users(page, per_page, fullname, email, family_id):
     return users
 
 
-
-
-
 # Getting all users under one family name
 def get_family_users(family_id):
-    users = User.query.filter(User.family_name == family_id)
-    if not users:
-        return "No users found"
+    users = User.query.filter(User.family_name == family_id).all()
     return [user.to_dict() for user in users]
