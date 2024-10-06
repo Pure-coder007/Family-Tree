@@ -5,7 +5,7 @@ from flask_jwt_extended import jwt_required
 import traceback
 from utils import return_response
 from models import (get_family_names, create_family_name,
-                    create_user, email_or_phone_exists, get_all_users, User, UserSession)
+                    create_user, email_or_phone_exists, get_all_users, User, UserSession, get_family_users)
 from decorators import super_admin_required
 import datetime
 
@@ -182,7 +182,6 @@ def create_fam_user():
             deceased_at=data.get("deceased_at")
         )
 
->>>>>>> d7106e07f38c9ea1f19018051a0f50a2ce0c52d4
         return return_response(
             HttpStatus.CREATED,
             status=StatusRes.SUCCESS,
@@ -251,3 +250,29 @@ def change_password():
             status=StatusRes.FAILED,
             message="Network Error"
         )
+
+
+# Getting all users under one family name
+@account.route(f"{ACCOUNT_URL_PREFIX}/family-users/<family_id>", methods=["GET"])
+@jwt_required()
+def family_users(family_id):
+    try:
+        users = get_family_users(family_id)
+        if not users:
+            return return_response(
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="No users found"
+            )
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Family users retrieved", data=users
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "family users traceback")
+        print(e, "family users error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+        
