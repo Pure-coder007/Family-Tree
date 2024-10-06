@@ -233,3 +233,14 @@ def get_all_users(page, per_page, fullname, email, family_id):
         users = users.filter(User.family_name == family_id)
     users = users.order_by(User.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
     return users
+
+
+
+
+
+# Getting all users under one family name
+def get_family_users(family_id):
+    users = User.query.filter(User.family_name == family_id)
+    if not users:
+        return "No users found"
+    return [user.to_dict() for user in users]
