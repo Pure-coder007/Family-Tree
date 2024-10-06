@@ -92,7 +92,7 @@ class User(db.Model):
             "img_str": self.img_str,
             "family_name": self.family.name.title() if self.family_name else None,
             "phone_number": self.phone_number,
-            "dob": self.dob,
+            "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
             "status": self.status.value,
             "deceased_at": self.deceased_at,
         }
