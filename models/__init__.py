@@ -33,7 +33,7 @@ class ChildType(Enum):
 
 class Status(Enum):
     alive = "Alive"
-    dead = "Dead"
+    deceased = "Deceased"
 
 
 class FamilyName(db.Model):
