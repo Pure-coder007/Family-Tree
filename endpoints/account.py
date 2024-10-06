@@ -234,9 +234,6 @@ def all_users():
 def change_password():
     try:
         data = request.get_json()
-        
-        
-        
 
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="Password changed"
@@ -258,12 +255,6 @@ def change_password():
 def family_users(family_id):
     try:
         users = get_family_users(family_id)
-        if not users:
-            return return_response(
-                HttpStatus.NOT_FOUND,
-                status=StatusRes.FAILED,
-                message="No users found"
-            )
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="Family users retrieved", data=users
         )
@@ -275,4 +266,3 @@ def family_users(family_id):
             status=StatusRes.FAILED,
             message="Network Error"
         )
-        
