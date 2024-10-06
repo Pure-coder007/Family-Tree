@@ -8,8 +8,8 @@ from utils import hex_uuid
 
 
 class Gender(Enum):
-    M = "Male"
-    F = "Female"
+    male = "Male"
+    female = "Female"
 
 
 class RelationshipType(Enum):
@@ -31,10 +31,19 @@ class ChildType(Enum):
     adopted_daughter = "Adopted Daughter"
 
 
+class Status(Enum):
+    alive = "Alive"
+    deceased = "Deceased"
+
+
 class FamilyName(db.Model):
     __tablename__ = "family_names"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
     name = db.Column(db.String(50), nullable=False)
+    users = db.relationship("User", backref="family", lazy=True)
+
+    def __init__(self, name):
+        self.name = name.lower()
 
 
 class User(db.Model):
@@ -45,6 +54,9 @@ class User(db.Model):
     last_name = db.Column(db.String(50), nullable=True)
     gender = db.Column(SQLAlchemyEnum(Gender))
     is_super_admin = db.Column(db.Boolean, default=False)
+    dob = db.Column(db.DateTime, nullable=True)
+    status = db.Column(SQLAlchemyEnum(Status), default=Status.alive)
+    deceased_at = db.Column(db.DateTime, nullable=True)
     img_str = db.Column(db.Text, nullable=True)
     phone_number = db.Column(db.String(25), nullable=True)
     password = db.Column(db.Text, nullable=False)
@@ -55,16 +67,36 @@ class User(db.Model):
 
     def __init__(self, email, password, first_name,
                  last_name, gender, is_super_admin, img_str=None,
-                 family_name=None, phone_number=None):
+                 family_name=None, phone_number=None, dob=None, status=None, deceased_at=None):
         self.email = email
         self.password = hasher.hash(password)
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
-        self.gender = Gender(gender)
+        self.gender = Gender(gender.title())
         self.is_super_admin = is_super_admin
         self.family_name = family_name
         self.img_str = img_str
         self.phone_number = phone_number
+        self.dob = dob
+        self.status = Status(status) if status else Status.alive
+        self.deceased_at = deceased_at
+
+    def to_dict(self):
+        user_dict = {
+            "id": self.id,
+            "email": self.email,
+            "first_name": self.first_name.title(),
+            "last_name": self.last_name.title(),
+            "gender": self.gender.value,
+            "is_super_admin": self.is_super_admin,
+            "img_str": self.img_str,
+            "family_name": self.family.name.title() if self.family_name else None,
+            "phone_number": self.phone_number,
+            "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
+            "status": self.status.value,
+            "deceased_at": self.deceased_at,
+        }
+        return {key: value for key, value in user_dict.items() if value}
 
     def update_password(self, new_password):
         self.password = hasher.hash(new_password)
@@ -106,10 +138,12 @@ class Child(db.Model):
 
 
 def create_user(email, password, first_name, last_name,
-                gender, img_str, is_super_admin=False, family_name=None, phone_number=None):
+                gender, img_str, is_super_admin=False, family_name=None, phone_number=None,
+                dob=None, status=None, deceased_at=None):
     user = User(email=email, password=password, first_name=first_name,
                 last_name=last_name, gender=gender, img_str=img_str,
-                is_super_admin=is_super_admin, family_name=family_name, phone_number=phone_number)
+                is_super_admin=is_super_admin, family_name=family_name,
+                phone_number=phone_number, dob=dob, status=status, deceased_at=deceased_at)
     db.session.add(user)
     db.session.commit()
     return user
@@ -130,7 +164,8 @@ def create_otp_token(user_id, otp=None, token=None):
             user_session.otp_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, otp=otp, otp_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+            user_session = UserSession(user_id=user_id, otp=otp,
+                                       otp_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
@@ -141,7 +176,8 @@ def create_otp_token(user_id, otp=None, token=None):
             user_session.token_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, token=token, token_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+            user_session = UserSession(user_id=user_id, token=token,
+                                       token_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
@@ -155,3 +191,45 @@ def get_user_by_email(email):
 
 def valid_email(email):
     return User.validate_email(email)
+
+
+def create_family_name(name):
+    fam = FamilyName.query.filter(
+        FamilyName.name.ilike(name)
+    ).first()
+    if fam:
+        return fam
+    family_name = FamilyName(name=name)
+    db.session.add(family_name)
+    db.session.commit()
+    return family_name
+
+
+def get_family_names():
+    family_names = FamilyName.query.all()
+    return [{"id": fam.id, "name": fam.name.title()} for fam in family_names]
+
+
+def email_or_phone_exists(email=None, phone_number=None):
+    if email:
+        return User.query.filter_by(email=email.lower()).first()
+    if phone_number:
+        return User.query.filter_by(phone_number=phone_number).first()
+    return None
+
+
+def get_all_users(page, per_page, fullname, email, family_id):
+    users = User.query
+    if fullname:
+        users = users.filter(
+            db.or_(
+                User.first_name.ilike(f"%{fullname}%"),
+                User.last_name.ilike(f"%{fullname}%")
+            )
+        )
+    if email:
+        users = users.filter(User.email.ilike(f"%{email}%"))
+    if family_id:
+        users = users.filter(User.family_name == family_id)
+    users = users.order_by(User.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    return users
