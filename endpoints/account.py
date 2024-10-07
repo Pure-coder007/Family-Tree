@@ -5,7 +5,8 @@ from flask_jwt_extended import jwt_required
 import traceback
 from utils import return_response
 from models import (get_family_names, create_family_name,
-                    create_user, email_or_phone_exists, get_all_users, User, UserSession, get_family_users)
+                    create_user, email_or_phone_exists, get_all_users, User, UserSession, get_family_users, 
+                    update_user)
 from decorators import super_admin_required
 import datetime
 
@@ -252,6 +253,7 @@ def change_password():
 # Getting all users under one family name
 @account.route(f"{ACCOUNT_URL_PREFIX}/family-users/<family_id>", methods=["GET"])
 @jwt_required()
+@super_admin_required
 def family_users(family_id):
     try:
         users = get_family_users(family_id)
@@ -261,6 +263,29 @@ def family_users(family_id):
     except Exception as e:
         print(traceback.format_exc(), "family users traceback")
         print(e, "family users error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+        
+
+
+
+# Edit Users
+@account.route(f"{ACCOUNT_URL_PREFIX}/edit-user/<user_id>", methods=["PATCH"])
+@jwt_required()
+@super_admin_required
+def edit_user(user_id):
+    try:
+        data = request.get_json()
+        update_user(user_id, **data)
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="User updated"
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "edit user traceback")
+        print(e, "edit user error")
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,

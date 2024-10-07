@@ -5,6 +5,9 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 import re
 import datetime
 from utils import hex_uuid
+# from datetime import datetime
+from datetime import datetime, timedelta
+
 
 
 class Gender(Enum):
@@ -90,7 +93,7 @@ class User(db.Model):
             "gender": self.gender.value,
             "is_super_admin": self.is_super_admin,
             "img_str": self.img_str,
-            "family_name": self.family.name.title() if self.family_name else None,
+            "family_name": self.family_name.title() if self.family_name else None,
             "phone_number": self.phone_number,
             "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
             "status": self.status.value,
@@ -156,16 +159,17 @@ def verify_user_login(email, password):
     return False
 
 
+
 def create_otp_token(user_id, otp=None, token=None):
     if otp:
         user_session = UserSession.query.filter_by(user_id=user_id).first()
         if user_session:
             user_session.otp = otp
-            user_session.otp_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
+            user_session.otp_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
             user_session = UserSession(user_id=user_id, otp=otp,
-                                       otp_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+                                       otp_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
@@ -173,15 +177,16 @@ def create_otp_token(user_id, otp=None, token=None):
         user_session = UserSession.query.filter_by(user_id=user_id).first()
         if user_session:
             user_session.token = token
-            user_session.token_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
+            user_session.token_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
             user_session = UserSession(user_id=user_id, token=token,
-                                       token_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+                                       token_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
     return None
+
 
 
 def get_user_by_email(email):
@@ -237,6 +242,48 @@ def get_all_users(page, per_page, fullname, email, family_id):
 
 # Getting all users under one family name
 def get_family_users(family_id):
+    users = User.query.filter(User.family_name == family_id)
+    if not users:
+        return "No users found"
+    return [user.to_dict() for user in users]
+
+
+
+# Update user
+def update_user(user_id,  **kwargs):
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return False
+    
+    # Update user attributes with provided keyword arguments
+    user.first_name = kwargs.get("first_name") or user.first_name
+    user.last_name = kwargs.get("last_name") or user.last_name
+    user.password = kwargs.get("password") or user.password
+    user.gender = kwargs.get("gender") or user.gender
+    user.img_str = kwargs.get("img_str") or user.img_str
+    user.status = kwargs.get("status") or user.status
+    user.email = kwargs.get("email") or user.email
+    
+    
+    # Handle date of birth conversion
+    dob_input = kwargs.get("dob")
+    if dob_input:
+        try:
+            user.dob = datetime.strptime(dob_input, '%d-%m-%Y').date()  # Convert to date
+        except ValueError:
+            return "Invalid date format. Please use DD-MM-YYYY."
+    else:
+        user.dob = user.dob  # Keep existing value if no new value is provided
+
+    user.deceased_at = kwargs.get("deceased_at") or user.deceased_at
+    user.phone_number = kwargs.get("phone_number") or user.phone_number
+    user.family_name = kwargs.get("family_name") or user.family_name
+    user.family_id = kwargs.get("family_id") or user.family_id
+    # hash password
+    user.password = hasher.hash(user.password)
+    
+    db.session.commit()
+    # return user
     users = User.query.filter(User.family_name == family_id).all()
     return [user.to_dict() for user in users]
 
