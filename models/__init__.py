@@ -93,7 +93,7 @@ class User(db.Model):
             "gender": self.gender.value,
             "is_super_admin": self.is_super_admin,
             "img_str": self.img_str,
-            "family_name": self.family.name.title() if self.family_name else None,
+            "family_name": self.family_name.title() if self.family_name else None,
             "phone_number": self.phone_number,
             "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
             "status": self.status.value,
