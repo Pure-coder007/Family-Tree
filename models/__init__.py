@@ -236,9 +236,6 @@ def get_all_users(page, per_page, fullname, email, family_id):
     return users
 
 
-
-
-
 # Getting all users under one family name
 def get_family_users(family_id):
     users = User.query.filter(User.family_name == family_id)
@@ -249,7 +246,7 @@ def get_family_users(family_id):
 
 
 # Update user
-def update_user(user_id, **kwargs):
+def update_user(user_id,  **kwargs):
     user = User.query.filter_by(id=user_id).first()
     if not user:
         return False
@@ -277,8 +274,11 @@ def update_user(user_id, **kwargs):
     user.deceased_at = kwargs.get("deceased_at") or user.deceased_at
     user.phone_number = kwargs.get("phone_number") or user.phone_number
     user.family_name = kwargs.get("family_name") or user.family_name
+    user.family_id = kwargs.get("family_id") or user.family_id
     # hash password
     user.password = hasher.hash(user.password)
     
     db.session.commit()
-    return user
+    # return user
+    users = User.query.filter(User.family_name == family_id).all()
+    return [user.to_dict() for user in users]
