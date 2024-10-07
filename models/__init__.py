@@ -5,6 +5,7 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 import re
 import datetime
 from utils import hex_uuid
+from datetime import datetime
 
 
 class Gender(Enum):
@@ -244,3 +245,40 @@ def get_family_users(family_id):
     if not users:
         return "No users found"
     return [user.to_dict() for user in users]
+
+
+
+# Update user
+def update_user(user_id, **kwargs):
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return False
+    
+    # Update user attributes with provided keyword arguments
+    user.first_name = kwargs.get("first_name") or user.first_name
+    user.last_name = kwargs.get("last_name") or user.last_name
+    user.password = kwargs.get("password") or user.password
+    user.gender = kwargs.get("gender") or user.gender
+    user.img_str = kwargs.get("img_str") or user.img_str
+    user.status = kwargs.get("status") or user.status
+    user.email = kwargs.get("email") or user.email
+    
+    
+    # Handle date of birth conversion
+    dob_input = kwargs.get("dob")
+    if dob_input:
+        try:
+            user.dob = datetime.strptime(dob_input, '%d-%m-%Y').date()  # Convert to date
+        except ValueError:
+            return "Invalid date format. Please use DD-MM-YYYY."
+    else:
+        user.dob = user.dob  # Keep existing value if no new value is provided
+
+    user.deceased_at = kwargs.get("deceased_at") or user.deceased_at
+    user.phone_number = kwargs.get("phone_number") or user.phone_number
+    user.family_name = kwargs.get("family_name") or user.family_name
+    # hash password
+    user.password = hasher.hash(user.password)
+    
+    db.session.commit()
+    return user
