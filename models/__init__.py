@@ -5,7 +5,9 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 import re
 import datetime
 from utils import hex_uuid
-from datetime import datetime
+# from datetime import datetime
+from datetime import datetime, timedelta
+
 
 
 class Gender(Enum):
@@ -157,16 +159,17 @@ def verify_user_login(email, password):
     return False
 
 
+
 def create_otp_token(user_id, otp=None, token=None):
     if otp:
         user_session = UserSession.query.filter_by(user_id=user_id).first()
         if user_session:
             user_session.otp = otp
-            user_session.otp_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
+            user_session.otp_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
             user_session = UserSession(user_id=user_id, otp=otp,
-                                       otp_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+                                       otp_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
@@ -174,15 +177,16 @@ def create_otp_token(user_id, otp=None, token=None):
         user_session = UserSession.query.filter_by(user_id=user_id).first()
         if user_session:
             user_session.token = token
-            user_session.token_expires_at = datetime.datetime.now() + datetime.timedelta(minutes=10)
+            user_session.token_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
             user_session = UserSession(user_id=user_id, token=token,
-                                       token_expires_at=datetime.datetime.now() + datetime.timedelta(minutes=10))
+                                       token_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(user_session)
             db.session.commit()
         return user_session
     return None
+
 
 
 def get_user_by_email(email):
