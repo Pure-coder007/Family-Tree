@@ -301,10 +301,16 @@ def edit_user(user_id):
 @super_admin_required
 def perform_delete_user(user_id):
     try:
+        # if user already deleted
+        if not delete_user(user_id):
+            return return_response(
+                HttpStatus.OK, status=StatusRes.FAILED, message="User does not exist"
+            )
         delete_user(user_id)
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="User deleted"
         )
+        
     except Exception as e:
         print(traceback.format_exc(), "delete user traceback")
         print(e, "delete user error")

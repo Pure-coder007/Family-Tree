@@ -296,5 +296,6 @@ def delete_user(user_id):
     if not user:
         return False
     db.session.delete(user)
+    
     db.session.commit()
     return True
