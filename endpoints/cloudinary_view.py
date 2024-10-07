@@ -8,10 +8,14 @@ from status_res import StatusRes
 import time
 import os
 import traceback
+from dotenv import load_dotenv
 
 cloudnary = Blueprint("cloudnary", __name__)
 
 ACCOUNT_PREFIX = "cloudinary"
+
+
+load_dotenv()
 
 
 @cloudnary.route(f"/{ACCOUNT_PREFIX}/manage-image", methods=["POST"])
