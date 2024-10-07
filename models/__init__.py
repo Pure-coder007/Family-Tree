@@ -82,7 +82,7 @@ class User(db.Model):
         self.phone_number = phone_number
         self.dob = dob
         self.status = Status(status) if status else Status.alive
-        self.deceased_at = deceased_at
+        self.deceased_at = deceased_at or None
 
     def to_dict(self):
         user_dict = {
