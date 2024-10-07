@@ -6,7 +6,7 @@ import traceback
 from utils import return_response
 from models import (get_family_names, create_family_name,
                     create_user, email_or_phone_exists, get_all_users, User, UserSession, get_family_users, 
-                    update_user)
+                    update_user, delete_user)
 from decorators import super_admin_required
 import datetime
 
@@ -286,6 +286,28 @@ def edit_user(user_id):
     except Exception as e:
         print(traceback.format_exc(), "edit user traceback")
         print(e, "edit user error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+
+
+# Delete user
+@account.route(f"{ACCOUNT_URL_PREFIX}/delete-user/<user_id>", methods=["DELETE"])
+@jwt_required()
+@super_admin_required
+def perform_delete_user(user_id):
+    try:
+        delete_user(user_id)
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="User deleted"
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "delete user traceback")
+        print(e, "delete user error")
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,

@@ -286,3 +286,15 @@ def update_user(user_id,  **kwargs):
     # return user
     users = User.query.filter(User.family_name == family_id).all()
     return [user.to_dict() for user in users]
+
+
+
+
+# Delete users by id
+def delete_user(user_id):
+    user = User.query.filter_by(id=user_id).first()
+    if not user:
+        return False
+    db.session.delete(user)
+    db.session.commit()
+    return True
