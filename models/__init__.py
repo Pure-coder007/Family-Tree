@@ -82,7 +82,7 @@ class User(db.Model):
         self.phone_number = phone_number
         self.dob = dob
         self.status = Status(status) if status else Status.alive
-        self.deceased_at = deceased_at
+        self.deceased_at = deceased_at or None
 
     def to_dict(self):
         user_dict = {
@@ -299,3 +299,107 @@ def delete_user(user_id):
     
     db.session.commit()
     return True
+
+
+def get_family_chain(user_id):
+    user = User.query.get(user_id)
+    if not user:
+        return None
+
+    family = {
+        'id': user.id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'gender': user.gender.value,
+        'status': user.status.value,
+        'dob': user.dob.strftime("%d-%b-%Y") if user.dob else None,
+        'parents': [],
+        'partners': [],
+        'children': []
+    }
+
+    # Get parents
+    parent_relationships = Relationship.query.filter_by(partner_id=user.id).all()
+    for relationship in parent_relationships:
+        parent = User.query.get(relationship.person_id)
+        if parent:
+            family['parents'].append({
+                'id': parent.id,
+                'first_name': parent.first_name,
+                'last_name': parent.last_name,
+                'gender': parent.gender.value
+            })
+
+    # Get partners
+    partner_relationships = Relationship.query.filter_by(person_id=user.id).all()
+    for relationship in partner_relationships:
+        partner = User.query.get(relationship.partner_id)
+        if partner:
+            family['partners'].append({
+                'id': partner.id,
+                'first_name': partner.first_name,
+                'last_name': partner.last_name,
+                'gender': partner.gender.value,
+                'relationship_type': relationship.relationship_type.value
+            })
+
+    # Get children
+    children_relationships = Child.query.filter_by(parent_id=user.id).all()
+    for child_relationship in children_relationships:
+        child = User.query.get(child_relationship.child_id)
+        if child:
+            family['children'].append(get_family_chain(child.id))  # Recursive call
+
+    return family
+
+
+def link_family_members(husband_id, wife_ids, child_ids):
+    # Fetch the husband from the database
+    husband = User.query.get(husband_id)
+
+    if not husband:
+        raise ValueError("Husband not found in the database.")
+
+    # Establish Relationships with Wives
+    for wife_id in wife_ids:
+        wife = User.query.get(wife_id)
+        if not wife:
+            raise ValueError(f"Wife with ID {wife_id} not found in the database.")
+
+        husband_wife_relationship = Relationship(
+            person_id=husband.id,
+            partner_id=wife.id,
+            relationship_type=RelationshipType.husband
+        )
+
+        wife_husband_relationship = Relationship(
+            person_id=wife.id,
+            partner_id=husband.id,
+            relationship_type=RelationshipType.wife
+        )
+
+        db.session.add(husband_wife_relationship)
+        db.session.add(wife_husband_relationship)
+
+    # Link Children
+    for child_id in child_ids:
+        child = User.query.get(child_id)
+        if not child:
+            raise ValueError(f"Child with ID {child_id} not found in the database.")
+
+        # Establish Child Relationships
+        child_relationship_husband = Child(
+            parent_id=husband.id,
+            child_id=child.id
+        )
+
+        child_relationship_wife = Child(
+            parent_id=wife.id,
+            child_id=child.id
+        )
+
+        db.session.add(child_relationship_husband)
+        db.session.add(child_relationship_wife)
+
+    # Commit all relationships to the database
+    db.session.commit()

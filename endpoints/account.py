@@ -61,6 +61,8 @@ def create_fam_user():
     try:
         data = request.get_json()
 
+        print(data, "data")
+
         # Define required and optional fields
         required_fields = ["email", "password", "first_name", "last_name",
                            "gender", "img_str", "phone_number", "dob"]
@@ -168,6 +170,9 @@ def create_fam_user():
             fam = create_family_name(fam_name)
 
         # Create user
+
+        print(data, "data 2")
+        print(dob, "dob")
         create_user(
             email=data.get("email"),
             password=data.get("password"),
