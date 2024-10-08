@@ -275,8 +275,6 @@ def family_users(family_id):
         )
         
 
-
-
 # Edit Users
 @account.route(f"{ACCOUNT_URL_PREFIX}/edit-user/<user_id>", methods=["PATCH"])
 @jwt_required()
