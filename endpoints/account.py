@@ -6,7 +6,7 @@ import traceback
 from utils import return_response, validate_request_data
 from models import (edit_member, email_exists, Moderators,
                     get_all_members, create_member_with_spouse,
-                    create_mod, get_family_chain)
+                    create_mod, get_family_chain, get_all_mods, update_mod)
 from decorators import super_admin_required
 import datetime
 import pprint
@@ -243,8 +243,8 @@ def get_one_member(member_id):
 
 # create mod
 @account.route(f"{ACCOUNT_URL_PREFIX}/create-mod", methods=["POST"])
-# @jwt_required()
-# @super_admin_required
+@jwt_required()
+@super_admin_required
 def create_moderator():
     try:
         data = request.get_json()
@@ -299,6 +299,104 @@ def create_moderator():
     except Exception as e:
         print(traceback.format_exc(), "create mod traceback")
         print(e, "create mod error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+# get al mods
+@account.route(f"{ACCOUNT_URL_PREFIX}/all-mods", methods=["GET"])
+@jwt_required()
+@super_admin_required
+def all_moderators():
+    try:
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 10))
+        fullname = request.args.get("fullname")
+        email = request.args.get("email")
+        mods = get_all_mods(page, per_page, fullname, email)
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="All mods retrieved", **{
+                "mods": [mod.to_dict() for mod in mods.items],
+                "total_items": mods.total,
+                "page": mods.page,
+                "per_page": mods.per_page,
+                "total_pages": mods.pages,
+            }
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "all mods traceback")
+        print(e, "all mods error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+# edit mod
+@account.route(f"{ACCOUNT_URL_PREFIX}/edit-mod/<mod_id>", methods=["PATCH"])
+@jwt_required()
+@super_admin_required
+def edit_moderator(mod_id):
+    try:
+        data = request.get_json()
+
+        pprint.pprint(data)
+
+        if data.get("status") and data.get("status") not in ["active", "inactive"]:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Invalid status"
+            )
+
+        res = update_mod(mod_id, **data)
+
+        if not res:
+            return return_response(
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="Moderator not found"
+            )
+
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Moderator updated"
+        )
+
+    except Exception as e:
+        print(traceback.format_exc(), "edit mod traceback")
+        print(e, "edit mod error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+# delete mod
+@account.route(f"{ACCOUNT_URL_PREFIX}/delete-mod/<mod_id>", methods=["DELETE"])
+@jwt_required()
+@super_admin_required
+def delete_moderator(mod_id):
+    try:
+        res = update_mod(mod_id, delete=True)
+
+        if not res:
+            return return_response(
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="Moderator not found"
+            )
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Moderator deleted"
+        )
+
+    except Exception as e:
+        print(traceback.format_exc(), "delete mod traceback")
+        print(e, "delete mod error")
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
