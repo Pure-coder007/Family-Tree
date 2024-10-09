@@ -1,15 +1,18 @@
 from http_status import HttpStatus
 from status_res import StatusRes
-from flask import Blueprint, request
+from flask import Blueprint, request, abort
 from flask_jwt_extended import jwt_required
 import traceback
 from utils import return_response, validate_request_data
 from models import (edit_member, email_exists, Moderators,
                     get_all_members, create_member_with_spouse,
-                    create_mod, get_family_chain)
+                    create_mod, get_family_chain, change_password)
 from decorators import super_admin_required
 import datetime
 import pprint
+from flask_jwt_extended import current_user
+import logging
+
 
 account = Blueprint('account', __name__)
 
@@ -309,17 +312,46 @@ def create_moderator():
 # change password
 @account.route(f"{ACCOUNT_URL_PREFIX}/change-password", methods=["PATCH"])
 @jwt_required()
-def change_password():
+def change_password_route():
     try:
         data = request.get_json()
+        old_password = data.get("old_password")
+        new_password = data.get("new_password")
+        confirm_password = data.get("confirm_password")
+
+        if not old_password:
+            return return_response(
+                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Old password is required"
+            )
+
+        if not new_password:
+            return return_response(
+                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="New password is required"
+            )
+
+        if not confirm_password:
+            return return_response(
+                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Confirm password is required"
+            )
+
+        if new_password != confirm_password:
+            return return_response(
+                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Passwords do not match"
+            )
+
+        if not change_password(current_user.id, old_password, new_password):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Incorrect old password"
+            )
 
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="Password changed"
         )
 
     except Exception as e:
-        print(traceback.format_exc(), "change password traceback")
-        print(e, "change password error")
+        logging.error("Change password error: %s", e)
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,

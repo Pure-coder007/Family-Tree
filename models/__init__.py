@@ -519,3 +519,16 @@ def update_mod(mod_id, **kwargs):
 
     db.session.commit()
     return True
+
+
+
+
+# Change password
+def change_password(mod_id, old_password, new_password):
+    mod = Moderators.query.filter_by(id=mod_id).first()
+    if not mod or not hasher.verify(old_password, mod.password):
+        return False  
+
+    mod.password = hasher.hash(new_password)
+    db.session.commit()
+    return True
