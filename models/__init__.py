@@ -2,12 +2,12 @@ from extensions import db
 from enum import Enum
 from passlib.hash import pbkdf2_sha256 as hasher
 from sqlalchemy import Enum as SQLAlchemyEnum
+from sqlalchemy.ext.hybrid import hybrid_property
 import re
 import datetime
 from utils import hex_uuid
 # from datetime import datetime
-from datetime import datetime, timedelta
-
+from datetime import datetime, timedelta, date
 
 
 class Gender(Enum):
@@ -39,367 +39,483 @@ class Status(Enum):
     deceased = "Deceased"
 
 
-class FamilyName(db.Model):
-    __tablename__ = "family_names"
+class Member(db.Model):
+    __tablename__ = "member"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    name = db.Column(db.String(50), nullable=False)
-    users = db.relationship("User", backref="family", lazy=True)
-
-    def __init__(self, name):
-        self.name = name.lower()
-
-
-class User(db.Model):
-    __tablename__ = "users"
-    id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    email = db.Column(db.String(50), unique=True, nullable=False)
     first_name = db.Column(db.String(50), nullable=True)
     last_name = db.Column(db.String(50), nullable=True)
     gender = db.Column(SQLAlchemyEnum(Gender))
-    is_super_admin = db.Column(db.Boolean, default=False)
     dob = db.Column(db.DateTime, nullable=True)
     status = db.Column(SQLAlchemyEnum(Status), default=Status.alive)
     deceased_at = db.Column(db.DateTime, nullable=True)
     img_str = db.Column(db.Text, nullable=True)
     phone_number = db.Column(db.String(25), nullable=True)
-    password = db.Column(db.Text, nullable=False)
-    family_name = db.Column(db.String(50), db.ForeignKey("family_names.id"), nullable=True)
+    occupation = db.Column(db.String(50), nullable=True)
+    birth_place = db.Column(db.String(150), nullable=True)
+    birth_name = db.Column(db.String(150), nullable=True)
+    story_line = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
     updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
-    user_session = db.relationship("UserSession", backref="user", lazy=True, uselist=False)
+    child = db.relationship("Child", backref="member", lazy=True, uselist=False)
+    # Relationships for spouses (as a husband and as a wife)
+    husband_spouse = db.relationship("Spouse", foreign_keys="[Spouse.husband_id]", backref="husband_member",
+                                     overlaps="spouse_as_husband")
+    wife_spouse = db.relationship("Spouse", foreign_keys="[Spouse.wife_id]", backref="wife_member",
+                                  overlaps="spouse_as_wife")
 
-    def __init__(self, email, password, first_name,
-                 last_name, gender, is_super_admin, img_str=None,
-                 family_name=None, phone_number=None, dob=None, status=None, deceased_at=None):
-        self.email = email
-        self.password = hasher.hash(password)
+    other_spouses_as_member = db.relationship(
+        "OtherSpouse",
+        backref="member_as_primary",  # Renamed backref for clarity
+        foreign_keys="[OtherSpouse.member_id]",
+        lazy=True,
+        overlaps="other_spouses_as_related"
+    )
+    other_spouses_as_related = db.relationship(
+        "OtherSpouse",
+        backref="member_as_related",  # Renamed backref for clarity
+        foreign_keys="[OtherSpouse.member_related_to]",
+        lazy=True,
+        overlaps="other_spouses_as_member"
+    )
+
+    @hybrid_property
+    def spouse(self):
+        if self.spouse_as_husband:
+            return self.spouse_as_husband[0].wife
+        elif self.spouse_as_wife:
+            return self.spouse_as_wife[0].husband
+        return None
+
+    def __init__(self, first_name,
+                 last_name, gender, img_str=None,
+                 phone_number=None, dob=None, status=None, deceased_at=None,
+                 occupation=None,
+                 birth_place=None, birth_name=None):
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
         self.gender = Gender(gender.title())
-        self.is_super_admin = is_super_admin
-        self.family_name = family_name
         self.img_str = img_str
         self.phone_number = phone_number
         self.dob = dob
         self.status = Status(status) if status else Status.alive
         self.deceased_at = deceased_at or None
+        self.occupation = occupation
+        self.birth_name = birth_name
+        self.birth_place = birth_place
 
     def to_dict(self):
-        user_dict = {
+        member_dict = {
             "id": self.id,
-            "email": self.email,
             "first_name": self.first_name.title(),
             "last_name": self.last_name.title(),
             "gender": self.gender.value,
-            "is_super_admin": self.is_super_admin,
             "img_str": self.img_str,
-            "family_name": self.family_name.title() if self.family_name else None,
             "phone_number": self.phone_number,
             "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
             "status": self.status.value,
-            "deceased_at": self.deceased_at,
+            "deceased_at": self.deceased_at.strftime("%d-%b-%Y") if self.deceased_at else None,
         }
-        return {key: value for key, value in user_dict.items() if value}
+        return {key: value for key, value in member_dict.items() if value}
 
-    def update_password(self, new_password):
-        self.password = hasher.hash(new_password)
-        db.session.commit()
+    def __repr__(self):
+        return f"<Member {self.last_name}>"
+
+
+class Moderators(db.Model):
+    __tablename__ = "moderators"
+    id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
+    fullname = db.Column(db.String(150), nullable=False)
+    email = db.Column(db.String(50), nullable=False)
+    is_super_admin = db.Column(db.Boolean, default=False)
+    password = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(50), default="active")
+    mod_sessions = db.relationship("ModSession", backref="moderator", lazy=True)
+
+    def __repr__(self):
+        return f"<Moderator {self.fullname}>"
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "fullname": self.fullname,
+            "email": self.email,
+            "is_super_admin": self.is_super_admin,
+            "status": self.status
+        }
 
     @staticmethod
     def validate_email(email):
-        return re.match(r"[^@]+@[^@]+\.[^@]+", email)
+        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        if re.fullmatch(regex, email):
+            return True
+        return False
 
-    def __repr__(self):
-        return f"<User {self.username}>"
 
-
-class UserSession(db.Model):
-    __tablename__ = "user_sessions"
+class ModSession(db.Model):
+    __tablename__ = "mod_sessions"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    user_id = db.Column(db.String(50), db.ForeignKey("users.id"), nullable=False)
+    mod_id = db.Column(db.String(50), db.ForeignKey("moderators.id"), nullable=False)
     otp = db.Column(db.String(6), nullable=True)
     token = db.Column(db.String(255), nullable=True)
     otp_expires_at = db.Column(db.DateTime, nullable=True)
     token_expires_at = db.Column(db.DateTime, nullable=True)
 
     def __repr__(self):
-        return f"<UserSession {self.user_id}>"
+        return f"<ModSession {self.mod_id}>"
 
 
-class Relationship(db.Model):
+class Spouse(db.Model):
+    __tablename__ = "spouse"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    person_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
-    partner_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
+    husband_id = db.Column(db.String(50), db.ForeignKey('member.id'))
+    wife_id = db.Column(db.String(50), db.ForeignKey('member.id'))
+    other_spouses = db.relationship("OtherSpouse", backref="spouse", lazy=True)
+    children = db.relationship("Child", backref="spouse", lazy=True)
+    husband = db.relationship("Member", foreign_keys=[husband_id], backref="spouse_as_husband",
+                              overlaps="husband_spouse,husband_member")
+    wife = db.relationship("Member", foreign_keys=[wife_id], backref="spouse_as_wife",
+                           overlaps="wife_spouse,wife_member")
+    date_created = db.Column(db.DateTime, server_default=db.func.now())
+    date_updated = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+
+    def to_dict(self):
+        return_dict = {
+            "id": self.id,
+            "husband": self.husband.to_dict(),
+            "wife": self.wife.to_dict(),
+            "other_spouses": [other_spouse.to_dict() for other_spouse in self.other_spouses]
+        }
+        return {key: value for key, value in return_dict.items() if value}
+
+    def parent_to_dict(self):
+        return_dict = {
+            "id": self.id,
+            "father": self.husband.to_dict(),
+            "mother": self.wife.to_dict(),
+            # "other_spouses": [other_spouse.to_dict() for other_spouse in self.other_spouses],
+            # "children": [child.to_dict() for child in self.children]
+        }
+        return {key: value for key, value in return_dict.items() if value}
+
+
+class OtherSpouse(db.Model):
+    __tablename__ = "other_spouse"
+    id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
+    member_id = db.Column(db.String(50), db.ForeignKey('member.id'))
+    member_related_to = db.Column(db.String(50), db.ForeignKey('member.id'))
     relationship_type = db.Column(SQLAlchemyEnum(RelationshipType))
+    spouse_id = db.Column(db.String(50), db.ForeignKey('spouse.id'))
+
+    member = db.relationship(
+        "Member",
+        foreign_keys=[member_id],
+        backref="primary_other_spouses",  # Changed backref name
+        overlaps="related_member,member_as_related"  # Specify overlaps here
+    )
+    related_member = db.relationship(
+        "Member",
+        foreign_keys=[member_related_to],
+        backref="related_other_spouses",  # Changed backref name
+        overlaps="member,member_as_primary"  # Specify overlaps here
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "relationship_type": self.relationship_type.value,
+            "member": self.member.to_dict() if self.member else None,
+            "related_member": self.related_member.to_dict() if self.related_member else None
+        }
 
 
 class Child(db.Model):
+    __tablename__ = "child"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    parent_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
-    child_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
+    member_id = db.Column(db.String(50), db.ForeignKey('member.id'))
+    spouse_id = db.Column(db.String(50), db.ForeignKey('spouse.id'))
     child_type = db.Column(SQLAlchemyEnum(ChildType))
 
+    def to_dict(self):
+        return self.member.to_dict()
 
-def create_user(email, password, first_name, last_name,
-                gender, img_str, is_super_admin=False, family_name=None, phone_number=None,
-                dob=None, status=None, deceased_at=None):
-    user = User(email=email, password=password, first_name=first_name,
-                last_name=last_name, gender=gender, img_str=img_str,
-                is_super_admin=is_super_admin, family_name=family_name,
-                phone_number=phone_number, dob=dob, status=status, deceased_at=deceased_at)
-    db.session.add(user)
+
+def create_mod(email, password, fullname, is_super_admin=False):
+    mod = Moderators(email=email, password=hasher.hash(password), is_super_admin=is_super_admin,
+                      fullname=fullname)
+    db.session.add(mod)
     db.session.commit()
-    return user
+    return mod
 
 
-def verify_user_login(email, password):
-    user = User.query.filter_by(email=email).first()
-    if user and hasher.verify(password, user.password):
-        return user
+# get spouse details
+def get_spouse_details(member_id):
+    spouse = Spouse.query.filter(
+        db.or_(Spouse.husband_id == member_id, Spouse.wife_id == member_id)
+    ).first()
+    if spouse:
+        return spouse.to_dict()
+    return {}
+
+
+def save_member(payload):
+    if payload.get("dob") and not isinstance(payload.get("dob"), date):
+        payload["dob"] = datetime.strptime(payload.get("dob"), "%d-%m-%Y").date()
+
+    if payload.get("deceased_at") and not isinstance(payload.get("deceased_at"), date):
+        payload["deceased_at"] = datetime.strptime(payload.get("deceased_at"), "%d-%m-%Y").date()
+    member = Member(
+        first_name=payload.get("first_name"),
+        last_name=payload.get("last_name"),
+        gender=payload.get("gender"),
+        dob=payload.get("dob"),
+        status=payload.get("status"),
+        deceased_at=payload.get("deceased_at"),
+        img_str=payload.get("img_str"),
+        phone_number=payload.get("phone_number"),
+        occupation=payload.get("occupation"),
+        birth_place=payload.get("birth_place"),
+        birth_name=payload.get("birth_name")
+    )
+
+    db.session.add(member)
+    db.session.commit()
+    return member
+
+
+def create_member_with_spouse(data):
+    member = save_member(data)
+    print(member.gender == Gender.male, "this is gender")
+    if member.gender == Gender.female:
+        print("this is female")
+        wife_id = member.id
+        husband_id = None
+    else:
+        print("this is male")
+        print(member.id, "the id for male")
+        wife_id = None
+        husband_id = member.id
+    if data.get("spouse"):
+        sec_mem = save_member(data.get("spouse"))
+        if sec_mem.gender == Gender.female:
+            wife_id = sec_mem.id
+            husband_id = member.id
+        else:
+            wife_id = member.id
+            husband_id = sec_mem.id
+
+    print(husband_id, "the husband id")
+    print(wife_id, "the wife id")
+    res, err = save_spouse_details(husband_id, wife_id, data.get("other_spouses"), data.get("children"))
+    return res, err
+
+
+def save_spouse_details(husband_id, wife_id, other_spouses, children):
+    if other_spouses and not isinstance(other_spouses, list):
+        return False, "other spouses must be an array"
+    if children and not isinstance(children, list):
+        return False, "children must be an array"
+    # query for husband and wife
+    spouse = Spouse.query.filter_by(husband_id=husband_id).first()
+    if not spouse:
+        spouse = Spouse.query.filter_by(wife_id=wife_id).first()
+    if spouse:
+        spouse.wife_id = wife_id
+    else:
+        spouse = Spouse(husband_id=husband_id, wife_id=wife_id)
+        db.session.add(spouse)
+    db.session.commit()
+    if other_spouses:
+        for other_spouse in other_spouses:
+            member = save_member(other_spouse)
+            if member.gender == Gender.female:
+                member_related_to = husband_id or wife_id
+            else:
+                member_related_to = wife_id or husband_id
+            save_other_spouses(member.id, member_related_to,
+                               other_spouse["relationship_type"], spouse.id)
+    if children:
+        for child in children:
+            child_member = save_member(child)
+            save_child(child_member.id, spouse.id, child["child_type"])
+    return spouse, None
+
+
+def save_other_spouses(member_id, member_related_to, relationship_type, spouse_id):
+    other_spouse = OtherSpouse(member_id=member_id, member_related_to=member_related_to,
+                               relationship_type=RelationshipType(relationship_type.title()), spouse_id=spouse_id)
+    db.session.add(other_spouse)
+    db.session.commit()
+    return other_spouse
+
+
+def save_child(member_id, spouse_id, child_type):
+    child = Child(member_id=member_id, spouse_id=spouse_id, child_type=ChildType(child_type.title()))
+    db.session.add(child)
+    db.session.commit()
+    return child
+
+
+def edit_child(child_id, payload, remove=False):
+    child = Child.query.filter_by(id=child_id).first()
+    if not child:
+        return False
+    if remove:
+        db.session.delete(child)
+    else:
+        child.spouse_id = payload.get("spouse_id") or child.spouse_id
+        child.member_id = payload.get("member_id") or child.member_id
+        child.child_type = payload.get("child_type") or child.child_type
+    db.session.commit()
+    return child
+
+
+# update member
+def edit_member(member_id, payload):
+    member = Member.query.filter_by(id=member_id).first()
+    if not member:
+        return False
+    member.first_name = payload.get("first_name") or member.first_name
+    member.last_name = payload.get("last_name") or member.last_name
+    member.dob = payload.get("dob") or member.dob
+    member.status = payload.get("status") or member.status
+    member.deceased_at = payload.get("deceased_at") or member.deceased_at
+    member.img_str = payload.get("img_str") or member.img_str
+    member.phone_number = payload.get("phone_number") or member.phone_number
+    member.occupation = payload.get("occupation") or member.occupation
+    member.birth_place = payload.get("birth_place") or member.birth_place
+    member.birth_name = payload.get("birth_name") or member.birth_name
+    member.gender = payload.get("gender") or member.gender
+    member.story_line = payload.get("story_line") or member.story_line
+
+    if payload.get("spouse"):
+        sec_mem = save_member(payload.get("spouse"))
+        if member.gender == Gender.female:
+            wife_id = sec_mem.id
+            husband_id = member.id
+        else:
+            wife_id = member.id
+            husband_id = sec_mem.id
+        save_spouse_details(husband_id, wife_id, payload.get("other_spouses"), payload.get("children"))
+    db.session.commit()
+    return member
+
+
+def get_children(spouse_id):
+    children = Child.query.filter_by(spouse_id=spouse_id).all()
+    all_children = [child.to_dict() for child in children]
+    return all_children
+
+
+def get_other_spouses(spouse_id):
+    other_spouses = OtherSpouse.query.filter_by(member_related_to=spouse_id).all()
+    all_other_spouses = [other_spouse.to_dict() for other_spouse in other_spouses]
+    return all_other_spouses
+
+
+def get_parents(spouse_id):
+    parents = Spouse.query.filter_by(id=spouse_id).first()
+    if parents:
+        return {
+            "father": parents.husband.to_dict(),
+            "mother": parents.wife.to_dict()
+        }
+    return None
+
+
+def get_family_chain(member_id):
+    member = Member.query.filter_by(id=member_id).first()
+    if not member:
+        return None
+    family_chain = {}
+    # check if member has parents/ he's a child
+    if member.child:
+        parent = get_parents(member.child.spouse_id)
+        family_chain["parents"] = parent
+
+    # get spouse details
+    if member.spouse:
+        spouse = get_spouse_details(member_id)
+        children = get_children(spouse["id"])
+        family_chain["spouse"] = spouse
+        family_chain["children"] = children
+
+    return family_chain
+
+
+def verify_mod_login(email, password):
+    mod = Moderators.query.filter_by(email=email).first()
+    if mod and hasher.verify(password, mod.password):
+        return mod
     return False
 
 
-
-def create_otp_token(user_id, otp=None, token=None):
+def create_otp_token(mod_id, otp=None, token=None):
     if otp:
-        user_session = UserSession.query.filter_by(user_id=user_id).first()
-        if user_session:
-            user_session.otp = otp
-            user_session.otp_expires_at = datetime.now() + timedelta(minutes=10)
+        mod_session = ModSession.query.filter_by(mod_id=mod_id).first()
+        if mod_session:
+            mod_session.otp = otp
+            mod_session.otp_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, otp=otp,
+            mod_session = ModSession(mod_id=mod_id, otp=otp,
                                        otp_expires_at=datetime.now() + timedelta(minutes=10))
-            db.session.add(user_session)
+            db.session.add(mod_session)
             db.session.commit()
-        return user_session
+        return mod_session
     elif token:
-        user_session = UserSession.query.filter_by(user_id=user_id).first()
-        if user_session:
-            user_session.token = token
-            user_session.token_expires_at = datetime.now() + timedelta(minutes=10)
+        mod_session = ModSession.query.filter_by(mod_id=mod_id).first()
+        if mod_session:
+            mod_session.token = token
+            mod_session.token_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
-            user_session = UserSession(user_id=user_id, token=token,
+            mod_session = ModSession(mod_id=mod_id, token=token,
                                        token_expires_at=datetime.now() + timedelta(minutes=10))
-            db.session.add(user_session)
+            db.session.add(mod_session)
             db.session.commit()
-        return user_session
+        return mod_session
     return None
 
 
-
-def get_user_by_email(email):
-    user = User.query.filter_by(email=email.lower()).first()
-    return user
+def get_mod_by_email(email):
+    mod = Moderators.query.filter_by(email=email.lower()).first()
+    return mod
 
 
 def valid_email(email):
-    return User.validate_email(email)
+    return Moderators.validate_email(email)
 
 
-def create_family_name(name):
-    fam = FamilyName.query.filter(
-        FamilyName.name.ilike(name)
-    ).first()
-    if fam:
-        return fam
-    family_name = FamilyName(name=name)
-    db.session.add(family_name)
-    db.session.commit()
-    return family_name
+def email_exists(email):
+    return Moderators.query.filter_by(email=email.lower()).first()
 
 
-def get_family_names():
-    family_names = FamilyName.query.all()
-    return [{"id": fam.id, "name": fam.name.title()} for fam in family_names]
-
-
-def email_or_phone_exists(email=None, phone_number=None):
-    if email:
-        return User.query.filter_by(email=email.lower()).first()
-    if phone_number:
-        return User.query.filter_by(phone_number=phone_number).first()
-    return None
-
-
-def get_all_users(page, per_page, fullname, email, family_id):
-    users = User.query
+def get_all_members(page, per_page, fullname):
+    members = Member.query
     if fullname:
-        users = users.filter(
+        members = members.filter(
             db.or_(
-                User.first_name.ilike(f"%{fullname}%"),
-                User.last_name.ilike(f"%{fullname}%")
+                Member.first_name.ilike(f"%{fullname}%"),
+                Member.last_name.ilike(f"%{fullname}%")
             )
         )
-    if email:
-        users = users.filter(User.email.ilike(f"%{email}%"))
-    if family_id:
-        users = users.filter(User.family_name == family_id)
-    users = users.order_by(User.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
-    return users
+    members = members.order_by(Member.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+    return members
 
 
-# Getting all users under one family name
-def get_family_users(family_id):
-    users = User.query.filter(User.family_name == family_id)
-    if not users:
-        return "No users found"
-    return [user.to_dict() for user in users]
-
-
-
-# Update user
-def update_user(user_id,  **kwargs):
-    user = User.query.filter_by(id=user_id).first()
-    if not user:
+# Update mod
+def update_mod(mod_id, **kwargs):
+    mod = Moderators.query.filter_by(id=mod_id).first()
+    if not mod:
         return False
-    
-    # Update user attributes with provided keyword arguments
-    user.first_name = kwargs.get("first_name") or user.first_name
-    user.last_name = kwargs.get("last_name") or user.last_name
-    user.password = kwargs.get("password") or user.password
-    user.gender = kwargs.get("gender") or user.gender
-    user.img_str = kwargs.get("img_str") or user.img_str
-    user.status = kwargs.get("status") or user.status
-    user.email = kwargs.get("email") or user.email
-    
-    
-    # Handle date of birth conversion
-    dob_input = kwargs.get("dob")
-    if dob_input:
-        try:
-            user.dob = datetime.strptime(dob_input, '%d-%m-%Y').date()  # Convert to date
-        except ValueError:
-            return "Invalid date format. Please use DD-MM-YYYY."
-    else:
-        user.dob = user.dob  # Keep existing value if no new value is provided
 
-    user.deceased_at = kwargs.get("deceased_at") or user.deceased_at
-    user.phone_number = kwargs.get("phone_number") or user.phone_number
-    user.family_name = kwargs.get("family_name") or user.family_name
-    user.family_id = kwargs.get("family_id") or user.family_id
+    # Update mod attributes with provided keyword arguments
+    mod.password = kwargs.get("password") or mod.password
+    mod.email = kwargs.get("email") or mod.email
+    mod.is_super_admin = kwargs.get("is_super_admin") or mod.is_super_admin
     # hash password
-    user.password = hasher.hash(user.password)
-    
-    db.session.commit()
-    # return user
-    users = User.query.filter(User.family_name == family_id).all()
-    return [user.to_dict() for user in users]
+    mod.password = hasher.hash(mod.password)
 
-
-
-
-# Delete users by id
-def delete_user(user_id):
-    user = User.query.filter_by(id=user_id).first()
-    if not user:
-        return False
-    db.session.delete(user)
-    
     db.session.commit()
     return True
-
-
-def get_family_chain(user_id):
-    user = User.query.get(user_id)
-    if not user:
-        return None
-
-    family = {
-        'id': user.id,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'gender': user.gender.value,
-        'status': user.status.value,
-        'dob': user.dob.strftime("%d-%b-%Y") if user.dob else None,
-        'parents': [],
-        'partners': [],
-        'children': []
-    }
-
-    # Get parents
-    parent_relationships = Relationship.query.filter_by(partner_id=user.id).all()
-    for relationship in parent_relationships:
-        parent = User.query.get(relationship.person_id)
-        if parent:
-            family['parents'].append({
-                'id': parent.id,
-                'first_name': parent.first_name,
-                'last_name': parent.last_name,
-                'gender': parent.gender.value
-            })
-
-    # Get partners
-    partner_relationships = Relationship.query.filter_by(person_id=user.id).all()
-    for relationship in partner_relationships:
-        partner = User.query.get(relationship.partner_id)
-        if partner:
-            family['partners'].append({
-                'id': partner.id,
-                'first_name': partner.first_name,
-                'last_name': partner.last_name,
-                'gender': partner.gender.value,
-                'relationship_type': relationship.relationship_type.value
-            })
-
-    # Get children
-    children_relationships = Child.query.filter_by(parent_id=user.id).all()
-    for child_relationship in children_relationships:
-        child = User.query.get(child_relationship.child_id)
-        if child:
-            family['children'].append(get_family_chain(child.id))  # Recursive call
-
-    return family
-
-
-def link_family_members(husband_id, wife_ids, child_ids):
-    # Fetch the husband from the database
-    husband = User.query.get(husband_id)
-
-    if not husband:
-        raise ValueError("Husband not found in the database.")
-
-    # Establish Relationships with Wives
-    for wife_id in wife_ids:
-        wife = User.query.get(wife_id)
-        if not wife:
-            raise ValueError(f"Wife with ID {wife_id} not found in the database.")
-
-        husband_wife_relationship = Relationship(
-            person_id=husband.id,
-            partner_id=wife.id,
-            relationship_type=RelationshipType.husband
-        )
-
-        wife_husband_relationship = Relationship(
-            person_id=wife.id,
-            partner_id=husband.id,
-            relationship_type=RelationshipType.wife
-        )
-
-        db.session.add(husband_wife_relationship)
-        db.session.add(wife_husband_relationship)
-
-    # Link Children
-    for child_id in child_ids:
-        child = User.query.get(child_id)
-        if not child:
-            raise ValueError(f"Child with ID {child_id} not found in the database.")
-
-        # Establish Child Relationships
-        child_relationship_husband = Child(
-            parent_id=husband.id,
-            child_id=child.id
-        )
-
-        child_relationship_wife = Child(
-            parent_id=wife.id,
-            child_id=child.id
-        )
-
-        db.session.add(child_relationship_husband)
-        db.session.add(child_relationship_wife)
-
-    # Commit all relationships to the database
-    db.session.commit()

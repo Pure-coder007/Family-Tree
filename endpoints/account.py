@@ -3,12 +3,13 @@ from status_res import StatusRes
 from flask import Blueprint, request
 from flask_jwt_extended import jwt_required
 import traceback
-from utils import return_response
-from models import (get_family_names, create_family_name,
-                    create_user, email_or_phone_exists, get_all_users, User, UserSession, get_family_users, 
-                    update_user, delete_user)
+from utils import return_response, validate_request_data
+from models import (edit_member, email_exists, Moderators,
+                    get_all_members, create_member_with_spouse,
+                    create_mod, get_family_chain)
 from decorators import super_admin_required
 import datetime
+import pprint
 
 account = Blueprint('account', __name__)
 
@@ -33,91 +34,42 @@ def dashboard():
         )
 
 
-# get family names
-@account.route(f"{ACCOUNT_URL_PREFIX}/family-names", methods=["GET"])
+# create member
+@account.route(f"{ACCOUNT_URL_PREFIX}/create-member", methods=["POST"])
 @jwt_required()
 @super_admin_required
-def family_names():
-    try:
-        fam_names = get_family_names()
-        return return_response(
-            HttpStatus.OK, status=StatusRes.SUCCESS, message="Family names retrieved", family_names=fam_names
-        )
-    except Exception as e:
-        print(traceback.format_exc(), "family names traceback")
-        print(e, "family names error")
-        return return_response(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            status=StatusRes.FAILED,
-            message="Network Error"
-        )
-
-
-# create user
-@account.route(f"{ACCOUNT_URL_PREFIX}/create-user", methods=["POST"])
-@jwt_required()
-@super_admin_required
-def create_fam_user():
+def create_fam_member():
     try:
         data = request.get_json()
 
-        print(data, "data")
+        pprint.pprint(data)
+        gender = data.get("gender")
+        dob = data.get("dob")
+        deceased_at = data.get("deceased_at")
 
-        # Define required and optional fields
-        required_fields = ["email", "password", "first_name", "last_name",
-                           "gender", "img_str", "phone_number", "dob"]
-        optional_fields = {
-            "is_super_admin": False,
-            "family_name": None,
-            "family_id": None,
-        }
+        required_fields = ["first_name", "last_name", "gender", "dob", "status",
+                           "img_str", "birth_place", "birth_name"]
+        valid, message = validate_request_data(data, required_fields)
 
-        # Validate required fields
-        for key in required_fields:
-            if not data.get(key):
-                return return_response(
-                    HttpStatus.BAD_REQUEST,
-                    status=StatusRes.FAILED,
-                    message=f"{key} is required"
-                )
-
-        if data.get("gender") not in ("Male", "Female"):
+        if not valid:
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="Gender must be either Male or Female"
+                message=message
             )
 
-        if email_or_phone_exists(email=data.get("email")):
-            return return_response(
-                HttpStatus.CONFLICT,
-                status=StatusRes.FAILED,
-                message="Email already exists"
-            )
-
-        if email_or_phone_exists(phone_number=data.get("phone_number")):
-            return return_response(
-                HttpStatus.CONFLICT,
-                status=StatusRes.FAILED,
-                message="Phone number already exists"
-            )
-
-        # Extract optional fields
-        family_id = data.get("family_id")
-        fam_name = data.get("family_name")
-
-        if not family_id and not fam_name:
+        if gender not in ["Male", "Female"]:
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="Family name is required"
+                message="Invalid gender"
             )
 
-        if family_id and fam_name:
+        if data.get("deceased_at") and data.get("status") != "Deceased":
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="You can't select family name and provide a new one"
+                message="Only deceased members can have a deceased date"
             )
 
         if data.get("status") == "Deceased" and not data.get("deceased_at"):
@@ -127,76 +79,35 @@ def create_fam_user():
                 message="Deceased date is required"
             )
 
-        if data.get("status") == "Alive" and data.get("deceased_at"):
-            return return_response(
-                HttpStatus.BAD_REQUEST,
-                status=StatusRes.FAILED,
-                message="Deceased date is not required"
-            )
-
-        if data.get("deceased_at") and data.get("status") != "Deceased":
-            return return_response(
-                HttpStatus.BAD_REQUEST,
-                status=StatusRes.FAILED,
-                message="Deceased date is only allowed for deceased users"
-            )
-
         try:
-            dob = datetime.datetime.strptime(data.get("dob"), "%d-%m-%Y")
-            if dob > datetime.datetime.now():
-                return return_response(
-                    HttpStatus.BAD_REQUEST,
-                    status=StatusRes.FAILED,
-                    message="Date of birth cannot be in the future"
-                )
-
-            if data.get("deceased_at"):
-                data["deceased_at"] = datetime.datetime.strptime(data.get("deceased_at"), "%d-%m-%Y")
-                if data.get("deceased_at") > datetime.datetime.now():
-                    return return_response(
-                        HttpStatus.BAD_REQUEST,
-                        status=StatusRes.FAILED,
-                        message="Deceased date cannot be in the future"
-                    )
-        except ValueError:
+            data["dob"] = datetime.datetime.strptime(dob, "%d-%m-%Y").date() if dob else None
+            data["deceased_at"] = datetime.datetime.strptime(deceased_at, "%d-%m-%Y").date() if deceased_at else None
+        except ValueError as e:
+            print(traceback.format_exc(), "create member traceback")
+            print(e, "create member error")
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="Invalid date format, should be DD-MM-YYYY"
+                message="Invalid date format"
             )
 
-        # Create family name if provided
-        if fam_name:
-            fam = create_family_name(fam_name)
-
-        # Create user
-
-        print(data, "data 2")
-        print(dob, "dob")
-        create_user(
-            email=data.get("email"),
-            password=data.get("password"),
-            first_name=data.get("first_name"),
-            last_name=data.get("last_name"),
-            gender=data.get("gender"),
-            img_str=data.get("img_str"),
-            is_super_admin=data.get("is_super_admin", False),
-            family_name=fam.id if fam_name else family_id,
-            phone_number=data.get("phone_number"),
-            dob=dob,
-            status=data.get("status", "Alive"),
-            deceased_at=data.get("deceased_at")
-        )
+        res, err = create_member_with_spouse(data)
+        if err:
+            return return_response(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                status=StatusRes.FAILED,
+                message=err
+            )
 
         return return_response(
-            HttpStatus.CREATED,
+            HttpStatus.OK,
             status=StatusRes.SUCCESS,
-            message="User created"
+            message="Member created successfully"
         )
 
     except Exception as e:
-        print(traceback.format_exc(), "create user traceback")
-        print(e, "create user error")
+        print(traceback.format_exc(), "create member traceback")
+        print(e, "create member error")
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
@@ -204,29 +115,190 @@ def create_fam_user():
         )
 
 
-# get all users
-@account.route(f"{ACCOUNT_URL_PREFIX}/all-users", methods=["GET"])
+# edit fam member
+@account.route(f"{ACCOUNT_URL_PREFIX}/edit-member/<member_id>", methods=["POST"])
 @jwt_required()
-def all_users():
+@super_admin_required
+def edit_fam_member(member_id):
+    try:
+        data = request.get_json()
+        try:
+            if data.get("dob"):
+                data["dob"] = datetime.datetime.strptime(data["dob"], "%d-%m-%Y").date()
+            if data.get("deceased_at"):
+                data["deceased_at"] = datetime.datetime.strptime(data["deceased_at"], "%d-%m-%Y").date()
+        except ValueError as e:
+            print(traceback.format_exc(), "create member traceback")
+            print(e, "create member error")
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Invalid date format"
+            )
+
+        if data.get("status") == "Deceased" and not data.get("deceased_at"):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Deceased date is required"
+            )
+
+        if data.get("deceased_at") and data.get("status") != "Deceased":
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Only deceased members can have a deceased date"
+            )
+
+        if data.get("gender") and data.get("gender") not in ["Male", "Female"]:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Invalid gender, must be Male or Female"
+            )
+
+        if data.get("other_spouse") and not isinstance(data.get("other_spouse"), list):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Other spouse must be an array"
+            )
+
+        if data.get("children") and not isinstance(data.get("children"), list):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Children must be an array"
+            )
+
+        edit_member(member_id, data)
+
+        return return_response(
+            HttpStatus.OK,
+            status=StatusRes.SUCCESS,
+            message="Member updated successfully"
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "edit member traceback")
+        print(e, "edit member error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+# get all members
+@account.route(f"{ACCOUNT_URL_PREFIX}/all-members", methods=["GET"])
+@jwt_required()
+def all_members():
     try:
         page = int(request.args.get("page", 1))
         per_page = int(request.args.get("per_page", 10))
         fullname = request.args.get("fullname")
-        email = request.args.get("email")
-        family_id = request.args.get("family_id")
-        users = get_all_users(page, per_page, fullname, email, family_id)
+        members = get_all_members(page, per_page, fullname)
         return return_response(
-            HttpStatus.OK, status=StatusRes.SUCCESS, message="All users retrieved", data={
-                "users": [user.to_dict() for user in users.items],
-                "total_items": users.total,
-                "page": users.page,
-                "per_page": users.per_page,
-                "total_pages": users.pages,
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="All members retrieved", data={
+                "members": [member.to_dict() for member in members.items],
+                "total_items": members.total,
+                "page": members.page,
+                "per_page": members.per_page,
+                "total_pages": members.pages,
             }
         )
     except Exception as e:
-        print(traceback.format_exc(), "all users traceback")
-        print(e, "all users error")
+        print(traceback.format_exc(), "all members traceback")
+        print(e, "all members error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+# get one member
+@account.route(f"{ACCOUNT_URL_PREFIX}/member/<member_id>", methods=["GET"])
+@jwt_required()
+def get_one_member(member_id):
+    try:
+        member = get_family_chain(member_id)
+        if not member:
+            return return_response(
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="Member not found"
+            )
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Member retrieved", **member
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "get one member traceback")
+        print(e, "get one member error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+# create mod
+@account.route(f"{ACCOUNT_URL_PREFIX}/create-mod", methods=["POST"])
+# @jwt_required()
+# @super_admin_required
+def create_moderator():
+    try:
+        data = request.get_json()
+
+        email = data.get("email")
+        password = data.get("password")
+        is_super_admin = data.get("is_super_admin", False)
+        fullname = data.get("fullname")
+
+        if not email:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Email is required"
+            )
+
+        if not fullname:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Name is required"
+            )
+        if not password:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Password is required"
+            )
+
+        email = email.lower()
+
+        if not Moderators.validate_email(email):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Invalid email"
+            )
+
+        res = email_exists(data.get("email"))
+        if res:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Email already exists"
+            )
+        create_mod(email, password, fullname, is_super_admin)
+
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Moderator created"
+        )
+
+    except Exception as e:
+        print(traceback.format_exc(), "create mod traceback")
+        print(e, "create mod error")
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
@@ -248,77 +320,6 @@ def change_password():
     except Exception as e:
         print(traceback.format_exc(), "change password traceback")
         print(e, "change password error")
-        return return_response(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            status=StatusRes.FAILED,
-            message="Network Error"
-        )
-
-
-# Getting all users under one family name
-@account.route(f"{ACCOUNT_URL_PREFIX}/family-users/<family_id>", methods=["GET"])
-@jwt_required()
-@super_admin_required
-def family_users(family_id):
-    try:
-        users = get_family_users(family_id)
-        return return_response(
-            HttpStatus.OK, status=StatusRes.SUCCESS, message="Family users retrieved", data=users
-        )
-    except Exception as e:
-        print(traceback.format_exc(), "family users traceback")
-        print(e, "family users error")
-        return return_response(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            status=StatusRes.FAILED,
-            message="Network Error"
-        )
-        
-
-
-
-# Edit Users
-@account.route(f"{ACCOUNT_URL_PREFIX}/edit-user/<user_id>", methods=["PATCH"])
-@jwt_required()
-@super_admin_required
-def edit_user(user_id):
-    try:
-        data = request.get_json()
-        update_user(user_id, **data)
-        return return_response(
-            HttpStatus.OK, status=StatusRes.SUCCESS, message="User updated"
-        )
-    except Exception as e:
-        print(traceback.format_exc(), "edit user traceback")
-        print(e, "edit user error")
-        return return_response(
-            HttpStatus.INTERNAL_SERVER_ERROR,
-            status=StatusRes.FAILED,
-            message="Network Error"
-        )
-
-
-
-
-# Delete user
-@account.route(f"{ACCOUNT_URL_PREFIX}/delete-user/<user_id>", methods=["DELETE"])
-@jwt_required()
-@super_admin_required
-def perform_delete_user(user_id):
-    try:
-        # if user already deleted
-        if not delete_user(user_id):
-            return return_response(
-                HttpStatus.OK, status=StatusRes.FAILED, message="User does not exist"
-            )
-        delete_user(user_id)
-        return return_response(
-            HttpStatus.OK, status=StatusRes.SUCCESS, message="User deleted"
-        )
-        
-    except Exception as e:
-        print(traceback.format_exc(), "delete user traceback")
-        print(e, "delete user error")
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,

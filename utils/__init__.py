@@ -56,3 +56,10 @@ def generate_signature(params_to_sign, api_secret):
     except Exception as e:
         print(e, "error from generate_signature")
         return None
+
+
+def validate_request_data(data, required_fields):
+    for field in required_fields:
+        if not data.get(field):
+            return False, f"{field} is required"
+    return True, None

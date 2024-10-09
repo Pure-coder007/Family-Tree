@@ -5,7 +5,7 @@ from endpoints import AuthBlp, AccountBlp, CloudinaryBlp
 from http_status import HttpStatus
 from status_res import StatusRes
 from utils import return_response
-from models import User, UserSession, FamilyName, Relationship, Child
+from models import Member, ModSession, Spouse, OtherSpouse, Child, Moderators
 
 
 def create_app(config_name="development"):
@@ -60,7 +60,7 @@ def create_app(config_name="development"):
     @jwt.user_lookup_loader
     def user_lookup_callback(_jwt_header, jwt_data):
         user_id = jwt_data["sub"]
-        return User.query.get(user_id)
+        return Moderators.query.get(user_id)
     
     app.register_blueprint(AuthBlp, url_prefix="/api/v1")
     app.register_blueprint(AccountBlp, url_prefix="/api/v1")
