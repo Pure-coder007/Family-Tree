@@ -4,7 +4,7 @@ from flask import Blueprint, request
 import traceback
 from datetime import datetime
 from utils import return_response, return_access_token, generate_otp
-from models import verify_user_login, get_user_by_email, valid_email, create_otp_token
+from models import verify_mod_login, get_mod_by_email, valid_email, create_otp_token
 
 auth = Blueprint('auth', __name__)
 
@@ -31,38 +31,35 @@ def login():
                 status=StatusRes.FAILED,
                 message="Email and password are required"
             )
+
+        email = email.lower()
         
-        user = verify_user_login(email, password)
+        mod = verify_mod_login(email, password)
         
-        if not user:
+        if not mod:
             return return_response(
                 HttpStatus.UNAUTHORIZED,
                 status=StatusRes.FAILED,
                 message="Invalid credentials"
             )
         
-        access_token = return_access_token(user.id)
+        access_token = return_access_token(mod.id)
         
-        # Prepare user details to return
-        user_details = {
-            "id": user.id,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
-            "email": user.email,
-            "gender": user.gender.value,
-            "phone_number": user.phone_number,
-            "family_name": user.family_name,
-            "dob": user.dob.strftime('%d-%m-%Y') if user.dob else None,  # Format date if exists
-            "img_str": user.img_str
-     
-        }
+        # Prepare mod details to return
+        mod_details = {
+            "id": mod.id,
+            "fullname": mod.fullname,
+            "email": mod.email,
+            "is_super_admin": mod.is_super_admin,
+            "status": mod.status,
+            }
         
         return return_response(
             HttpStatus.OK,
             status=StatusRes.SUCCESS,
             message="Login successful",
             access_token=access_token, 
-            user_details=user_details
+            mod_details=mod_details
         )
     except Exception as e:
         print(traceback.format_exc(), "login traceback")
@@ -72,8 +69,6 @@ def login():
             status=StatusRes.FAILED,
             message="Network Error"
         )
-
-
 
 
 # forget password
@@ -91,16 +86,16 @@ def forget_password():
             return return_response(
                 HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid email"
             )
-        user = get_user_by_email(email)
-        if not user:
+        mod = get_mod_by_email(email)
+        if not mod:
             return return_response(
-                HttpStatus.NOT_FOUND, status=StatusRes.FAILED, message="User not found"
+                HttpStatus.NOT_FOUND, status=StatusRes.FAILED, message="Account not found"
             )
         otp = generate_otp()
         print(otp, "otp")
-        user_session = create_otp_token(user.id, otp=otp)
+        mod_session = create_otp_token(mod.id, otp=otp)
 
-        # send mail to the user for the otp
+        # send mail to the mod for the otp
 
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="OTP sent to email",
@@ -145,23 +140,23 @@ def reset_password(email):
             return return_response(
                 HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid email"
             )
-        user = get_user_by_email(email)
-        if not user:
+        mod = get_mod_by_email(email)
+        if not mod:
             return return_response(
-                HttpStatus.NOT_FOUND, status=StatusRes.FAILED, message="User not found"
+                HttpStatus.NOT_FOUND, status=StatusRes.FAILED, message="mod not found"
             )
 
-        if user.user_session.otp != otp:
+        if mod.mod_session.otp != otp:
             return return_response(
                 HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Invalid OTP"
             )
 
-        if user.user_session.otp_expires_at < datetime.now():
+        if mod.mod_session.otp_expires_at < datetime.now():
             return return_response(
                 HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="OTP has expired"
             )
 
-        user.update_password(new_password)
+        mod.update_password(new_password)
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="Password reset successful"
         )
