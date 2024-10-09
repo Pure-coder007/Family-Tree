@@ -505,17 +505,40 @@ def get_all_members(page, per_page, fullname):
 
 
 # Update mod
-def update_mod(mod_id, **kwargs):
+def update_mod(mod_id, delete=False, **kwargs):
     mod = Moderators.query.filter_by(id=mod_id).first()
     if not mod:
         return False
 
+    if delete:
+        db.session.delete(mod)
+        db.session.commit()
+        return True
+
     # Update mod attributes with provided keyword arguments
-    mod.password = kwargs.get("password") or mod.password
     mod.email = kwargs.get("email") or mod.email
     mod.is_super_admin = kwargs.get("is_super_admin") or mod.is_super_admin
+    mod.status = kwargs.get("status") or mod.status
+    mod.fullname = kwargs.get("fullname") or mod.fullname
     # hash password
-    mod.password = hasher.hash(mod.password)
 
     db.session.commit()
     return True
+
+
+# get all mods
+def get_all_mods(page, per_page, fullname, email):
+    mods = Moderators.query
+    if fullname:
+        mods = mods.filter(
+            Moderators.fullname.ilike(f"%{fullname}%")
+        )
+
+    if email:
+        mods = mods.filter(
+            Moderators.email.ilike(f"%{email}%")
+        )
+
+    mods = mods.order_by(Moderators.fullname.desc()).paginate(page=page, per_page=per_page, error_out=False)
+
+    return mods
