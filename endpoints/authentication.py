@@ -42,6 +42,13 @@ def login():
                 status=StatusRes.FAILED,
                 message="Invalid credentials"
             )
+
+        if mod.status != "active":
+            return return_response(
+                HttpStatus.UNAUTHORIZED,
+                status=StatusRes.FAILED,
+                message="Your account is not active. Please contact the super admin"
+            )
         
         access_token = return_access_token(mod.id)
         
