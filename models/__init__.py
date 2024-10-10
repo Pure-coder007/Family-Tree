@@ -88,6 +88,10 @@ class Member(db.Model):
             return self.spouse_as_wife[0].wife
         return None
 
+    @hybrid_property
+    def other_spouses(self):
+        return self.other_spouses_as_member
+
     def __init__(self, first_name,
                  last_name, gender, img_str=None,
                  phone_number=None, dob=None, status=None, deceased_at=None,
@@ -429,6 +433,20 @@ def get_parents(spouse_id):
     return None
 
 
+def get_related_spouse(member_id, member_relate_id):
+    spouse = OtherSpouse.query.filter_by(member_related_to=member_relate_id,
+                                         member_id=member_id).first()
+    if spouse:
+        return {
+            "husband": spouse.related_member.to_dict(),
+            "wife": spouse.member.to_dict()
+        } if spouse.member.gender == Gender.female else {
+            "husband": spouse.member.to_dict(),
+            "wife": spouse.related_member.to_dict()
+        }
+    return {}
+
+
 def get_family_chain(member_id):
     member = Member.query.filter_by(id=member_id).first()
     if not member:
@@ -446,6 +464,10 @@ def get_family_chain(member_id):
         children = get_children(spouse["id"])
         family_chain["spouse"] = spouse
         family_chain["children"] = children
+
+    if member.other_spouses:
+        spouse = get_related_spouse(member_id, member.other_spouses[0].member_related_to)
+        family_chain["spouse"] = spouse
 
     return family_chain
 
