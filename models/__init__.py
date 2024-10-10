@@ -118,7 +118,7 @@ class Member(db.Model):
             "img_str": self.img_str,
             "phone_number": self.phone_number,
             "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
-            "status": self.status.value,
+            "user_status": self.status.value,
             "deceased_at": self.deceased_at.strftime("%d-%b-%Y") if self.deceased_at else None,
             "occupation": self.occupation,
             "birth_name": self.birth_name,
@@ -452,14 +452,10 @@ def get_family_chain(member_id):
     if not member:
         return None
     family_chain = {}
-    is_category = None
     # check if member has parents/ he's a child
     if member.child:
         parent = get_parents(member.child.spouse_id)
         family_chain["parents"] = parent
-        # If the current member is the child, set the category to "child"
-        if member.id == member.child.id:
-            is_category = "child"
 
     # get spouse details
     if member.spouse:
@@ -469,24 +465,10 @@ def get_family_chain(member_id):
         family_chain["spouse"] = spouse
         family_chain["children"] = children
 
-        if spouse.get("husband") and spouse["husband"].get("id") == member_id:
-            is_category = "husband"
-        elif spouse.get("wife") and spouse["wife"].get("id") == member_id:
-            is_category = "wife"
-
     if member.other_spouses:
         spouse = get_related_spouse(member_id, member.other_spouses[0].member_related_to)
         family_chain["spouse"] = spouse
 
-        for other_spouse in spouse["other_spouses"]:
-            if other_spouse["member"]["id"] == member_id:
-                is_category = "other_spouse"
-                break
-            elif other_spouse["related_member"]["id"] == member_id:
-                is_category = "other_spouse"
-                break
-
-    family_chain["is_category"] = is_category
     return family_chain
 
 
@@ -583,6 +565,8 @@ def change_password(mod_id, old_password, new_password):
     mod.password = hasher.hash(new_password)
     db.session.commit()
     return True
+
+
 # get all mods
 def get_all_mods(page, per_page, fullname, email):
     mods = Moderators.query
@@ -599,3 +583,8 @@ def get_all_mods(page, per_page, fullname, email):
     mods = mods.order_by(Moderators.fullname.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
     return mods
+
+
+def get_one_fam_member(member_id):
+    member = Member.query.filter_by(id=member_id).first()
+    return member.to_dict()
