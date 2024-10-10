@@ -60,19 +60,20 @@ class Member(db.Model):
     # Relationships for spouses (as a husband and as a wife)
     husband_spouse = db.relationship("Spouse", foreign_keys="[Spouse.husband_id]", backref="husband_member",
                                      overlaps="spouse_as_husband")
+
     wife_spouse = db.relationship("Spouse", foreign_keys="[Spouse.wife_id]", backref="wife_member",
                                   overlaps="spouse_as_wife")
 
     other_spouses_as_member = db.relationship(
         "OtherSpouse",
-        backref="member_as_primary",  # Renamed backref for clarity
+        backref="member_as_primary",
         foreign_keys="[OtherSpouse.member_id]",
         lazy=True,
         overlaps="other_spouses_as_related"
     )
     other_spouses_as_related = db.relationship(
         "OtherSpouse",
-        backref="member_as_related",  # Renamed backref for clarity
+        backref="member_as_related",
         foreign_keys="[OtherSpouse.member_related_to]",
         lazy=True,
         overlaps="other_spouses_as_member"
@@ -81,9 +82,10 @@ class Member(db.Model):
     @hybrid_property
     def spouse(self):
         if self.spouse_as_husband:
-            return self.spouse_as_husband[0].wife
+            return self.spouse_as_husband[0].husband
         elif self.spouse_as_wife:
-            return self.spouse_as_wife[0].husband
+            print("spouse_as_wife")
+            return self.spouse_as_wife[0].wife
         return None
 
     def __init__(self, first_name,
@@ -114,6 +116,10 @@ class Member(db.Model):
             "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
             "status": self.status.value,
             "deceased_at": self.deceased_at.strftime("%d-%b-%Y") if self.deceased_at else None,
+            "occupation": self.occupation,
+            "birth_name": self.birth_name,
+            "birth_place": self.birth_place,
+            "story_line": self.story_line
         }
         return {key: value for key, value in member_dict.items() if value}
 
@@ -181,9 +187,10 @@ class Spouse(db.Model):
     def to_dict(self):
         return_dict = {
             "id": self.id,
-            "husband": self.husband.to_dict(),
-            "wife": self.wife.to_dict(),
+            "husband": self.husband.to_dict() if self.husband else {},
+            "wife": self.wife.to_dict() if self.wife else {},
             "other_spouses": [other_spouse.to_dict() for other_spouse in self.other_spouses]
+            if self.other_spouses else [],
         }
         return {key: value for key, value in return_dict.items() if value}
 
@@ -209,14 +216,14 @@ class OtherSpouse(db.Model):
     member = db.relationship(
         "Member",
         foreign_keys=[member_id],
-        backref="primary_other_spouses",  # Changed backref name
-        overlaps="related_member,member_as_related"  # Specify overlaps here
+        backref="primary_other_spouses",
+        overlaps="member_as_primary,other_spouses_as_member"
     )
     related_member = db.relationship(
         "Member",
         foreign_keys=[member_related_to],
-        backref="related_other_spouses",  # Changed backref name
-        overlaps="member,member_as_primary"  # Specify overlaps here
+        backref="related_other_spouses",
+        overlaps="member_as_related,other_spouses_as_related"
     )
 
     def to_dict(self):
@@ -434,6 +441,7 @@ def get_family_chain(member_id):
 
     # get spouse details
     if member.spouse:
+        print("gotten")
         spouse = get_spouse_details(member_id)
         children = get_children(spouse["id"])
         family_chain["spouse"] = spouse
