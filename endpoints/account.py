@@ -6,7 +6,8 @@ import traceback
 from utils import return_response, validate_request_data
 from models import (edit_member, email_exists, Moderators,
                     get_all_members, create_member_with_spouse,
-                    create_mod, get_family_chain, change_password, get_all_mods, update_mod)
+                    create_mod, get_family_chain, change_password,
+                    get_all_mods, update_mod, get_one_fam_member)
 from decorators import super_admin_required
 import datetime
 import pprint
@@ -225,6 +226,31 @@ def all_members():
 def get_one_member(member_id):
     try:
         member = get_family_chain(member_id)
+        if not member:
+            return return_response(
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="Member not found"
+            )
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Member retrieved", **member
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "get one member traceback")
+        print(e, "get one member error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+# get one fam member
+@account.route(f"{ACCOUNT_URL_PREFIX}/fam-member/<member_id>", methods=["GET"])
+@jwt_required()
+def get_one_fam(member_id):
+    try:
+        member = get_one_fam_member(member_id)
         if not member:
             return return_response(
                 HttpStatus.NOT_FOUND,
