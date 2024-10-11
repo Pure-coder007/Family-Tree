@@ -327,10 +327,12 @@ def save_spouse_details(husband_id, wife_id, other_spouses, children):
         return False, "children must be an array"
     # query for husband and wife
     spouse = Spouse.query.filter_by(husband_id=husband_id).first()
-    if not spouse:
-        spouse = Spouse.query.filter_by(wife_id=wife_id).first()
     if spouse:
         spouse.wife_id = wife_id
+    if not spouse:
+        spouse = Spouse.query.filter_by(wife_id=wife_id).first()
+        if spouse:
+            spouse.husband_id = husband_id
     else:
         spouse = Spouse(husband_id=husband_id, wife_id=wife_id)
         db.session.add(spouse)
