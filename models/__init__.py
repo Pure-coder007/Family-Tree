@@ -252,7 +252,7 @@ class Child(db.Model):
 
 def create_mod(email, password, fullname, is_super_admin=False):
     mod = Moderators(email=email, password=hasher.hash(password), is_super_admin=is_super_admin,
-                      fullname=fullname)
+                     fullname=fullname)
     db.session.add(mod)
     db.session.commit()
     return mod
@@ -488,7 +488,7 @@ def create_otp_token(mod_id, otp=None, token=None):
             db.session.commit()
         else:
             mod_session = ModSession(mod_id=mod_id, otp=otp,
-                                       otp_expires_at=datetime.now() + timedelta(minutes=10))
+                                     otp_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(mod_session)
             db.session.commit()
         return mod_session
@@ -500,7 +500,7 @@ def create_otp_token(mod_id, otp=None, token=None):
             db.session.commit()
         else:
             mod_session = ModSession(mod_id=mod_id, token=token,
-                                       token_expires_at=datetime.now() + timedelta(minutes=10))
+                                     token_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(mod_session)
             db.session.commit()
         return mod_session
@@ -560,7 +560,7 @@ def update_mod(mod_id, delete=False, **kwargs):
 def change_password(mod_id, old_password, new_password):
     mod = Moderators.query.filter_by(id=mod_id).first()
     if not mod or not hasher.verify(old_password, mod.password):
-        return False  
+        return False
 
     mod.password = hasher.hash(new_password)
     db.session.commit()
