@@ -321,6 +321,7 @@ def create_member_with_spouse(data):
 
 
 def save_spouse_details(husband_id, wife_id, other_spouses, children):
+    print("husband_id", husband_id, "wife_id", wife_id)
     if other_spouses and not isinstance(other_spouses, list):
         return False, "other spouses must be an array"
     if children and not isinstance(children, list):
@@ -417,12 +418,14 @@ def edit_member(member_id, payload):
 
     if payload.get("spouse"):
         sec_mem = save_member(payload.get("spouse"))
-        if member.gender == Gender.female:
+        if member.gender == Gender.male:
             wife_id = sec_mem.id
             husband_id = member.id
+            # print("this is female", wife_id, husband_id)
         else:
             wife_id = member.id
             husband_id = sec_mem.id
+            # print("this is male", wife_id, husband_id)
         save_spouse_details(husband_id, wife_id, payload.get("other_spouses"), payload.get("children"))
     db.session.commit()
     return member
