@@ -328,15 +328,30 @@ def save_spouse_details(husband_id, wife_id, other_spouses, children):
     # query for husband and wife
     spouse = Spouse.query.filter_by(husband_id=husband_id).first()
     if spouse:
+        print("found Husband")
+        # Update wife_id if spouse exists
         spouse.wife_id = wife_id
-    if not spouse:
+    else:
+        print("not found husband")
+        # Try to find a spouse by wife_id
         spouse = Spouse.query.filter_by(wife_id=wife_id).first()
         if spouse:
+            print("found wife")
+            # Update husband_id if spouse exists
             spouse.husband_id = husband_id
-    else:
-        spouse = Spouse(husband_id=husband_id, wife_id=wife_id)
-        db.session.add(spouse)
-    db.session.commit()
+        else:
+            print("creating new spouse")
+            # Create a new Spouse record if neither exists
+            spouse = Spouse(husband_id=husband_id, wife_id=wife_id)
+            db.session.add(spouse)
+
+        # Commit the changes to the database
+    try:
+        db.session.commit()
+    except Exception as e:
+        print(e, "error from save_spouse_details")
+        db.session.rollback()
+        return False
     if other_spouses:
         for other_spouse in other_spouses:
             member = save_member(other_spouse)
