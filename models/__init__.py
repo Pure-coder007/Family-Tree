@@ -427,6 +427,12 @@ def edit_member(member_id, payload):
             husband_id = sec_mem.id
             # print("this is male", wife_id, husband_id)
         save_spouse_details(husband_id, wife_id, payload.get("other_spouses"), payload.get("children"))
+    if not payload.get("spouse") and payload.get("other_spouses"):
+        for other_spouse in payload.get("other_spouses"):
+            member = save_member(other_spouse)
+            member_related_to = member_id
+            save_other_spouses(member.id, member_related_to,
+                               other_spouse["relationship_type"], member_related_to)
     db.session.commit()
     return member
 
