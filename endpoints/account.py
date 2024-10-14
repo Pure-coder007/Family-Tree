@@ -161,7 +161,7 @@ def edit_fam_member(member_id):
                 message="Invalid gender, must be Male or Female"
             )
 
-        if data.get("other_spouse") and not isinstance(data.get("other_spouse"), list):
+        if data.get("other_spouses") and not isinstance(data.get("other_spouses"), list):
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
