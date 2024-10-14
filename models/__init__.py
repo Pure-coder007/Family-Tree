@@ -188,14 +188,14 @@ class Spouse(db.Model):
     date_created = db.Column(db.DateTime, server_default=db.func.now())
     date_updated = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
 
-    def to_dict(self):
+    def to_dict(self, member_id=None):
         return_dict = {
             "id": self.id,
             "husband": self.husband.to_dict() if self.husband else {},
             "wife": self.wife.to_dict() if self.wife else {},
-            "other_spouses": [other_spouse.to_dict() for other_spouse in self.other_spouses]
-            if self.other_spouses else [],
         }
+        if member_id and member_id == self.other_spouses[0].member_related_to:
+            return_dict["other_spouses"] = [other_spouse.to_dict() for other_spouse in self.other_spouses]
         return {key: value for key, value in return_dict.items() if value}
 
     def parent_to_dict(self):
@@ -264,7 +264,7 @@ def get_spouse_details(member_id):
         db.or_(Spouse.husband_id == member_id, Spouse.wife_id == member_id)
     ).first()
     if spouse:
-        return spouse.to_dict()
+        return spouse.to_dict(member_id)
     return {}
 
 
@@ -487,6 +487,7 @@ def get_family_chain(member_id):
     if member.child:
         parent = get_parents(member.child.spouse_id)
         family_chain["parents"] = parent
+        family_chain["child"] = member.to_dict()
 
     # get spouse details
     if member.spouse:
@@ -495,6 +496,10 @@ def get_family_chain(member_id):
         children = get_children(spouse["id"])
         family_chain["spouse"] = spouse
         family_chain["children"] = children
+
+        # remove the child key
+        if "child" in family_chain:
+            del family_chain["child"]
 
     if member.other_spouses:
         spouse = get_related_spouse(member_id, member.other_spouses[0].member_related_to)
