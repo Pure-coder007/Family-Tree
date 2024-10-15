@@ -121,6 +121,67 @@ class Member(db.Model):
         return f"<Member {self.last_name}>"
 
 
+class Gallery(db.Model):
+    __tablename__ = "gallery"
+    id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
+    event_name = db.Column(db.String(50), nullable=True)
+    image = db.Column(db.Text, nullable=True)
+    event_year = db.Column(db.String(50), nullable=True)
+    
+    def __init__(self, event_name, image, event_year):
+        self.event_name = event_name
+        self.image = image
+        self.event_year = event_year
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "event_name": self.event_name,
+            "image": self.image
+        }
+    
+
+
+class Logo(db.Model):
+    __tablename__ = "logo"
+    id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
+    logo_image = db.Column(db.Text, nullable=True)
+    logo_title = db.Column(db.String(50), nullable=True)
+    hero_image = db.Column(db.Text, nullable=True)
+    story_year = db.Column(db.Integer, nullable=True)
+    ancestor_name = db.Column(db.String(50), nullable=True)
+    hero_text = db.Column(db.Text, nullable=True)
+    directory_image = db.Column(db.Text, nullable=True)
+    clan_name = db.Column(db.String(50), nullable=True)
+    
+    def __init__(self, logo_image, logo_title, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
+        self.logo_image = logo_image
+        self.logo_title = logo_title
+        self.hero_image = hero_image
+        self.story_year = story_year
+        self.ancestor_name = ancestor_name
+        self.hero_text = hero_text
+        self.directory_image = directory_image
+        self.clan_name = clan_name
+        
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "logo_image": self.logo_image,
+            "logo_title": self.logo_title,
+            "hero_image": self.hero_image,
+            "story_year": self.story_year,
+            "ancestor_name": self.ancestor_name,
+            "hero_text": self.hero_text,
+            "directory_image": self.directory_image,
+            "clan_name": self.clan_name
+        }
+        
+        
+        
+
+
+
 class Moderators(db.Model):
     __tablename__ = "moderators"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
@@ -551,3 +612,46 @@ def get_all_mods(page, per_page, fullname, email):
     mods = mods.order_by(Moderators.fullname.desc()).paginate(page=page, per_page=per_page, error_out=False)
 
     return mods
+
+
+
+# Add images, event_year, event_name
+def items_to_gallery(fam_image, fam_event_name, fam_event_year):
+    try:
+        gall = Gallery(image=fam_image, event_name=fam_event_name, event_year=fam_event_year)
+        db.session.add(gall)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()  # Rollback on error
+        print(f"Error adding to gallery: {e}")
+        return False
+    
+    
+    
+# Get items from gallery
+def get_items_from_gallery():
+    try:
+        items = Gallery.query.all()
+        print("Getting items from gallery", items)
+        return items
+    except Exception as e:
+        print(f"Error getting items from gallery: {e}")
+        return None
+    
+    
+    
+# Delete gallery item
+
+def delete_gallery_item(gallery_id):
+    try:
+        item = Gallery.query.filter_by(id=gallery_id).first()
+        if not item:
+            return False 
+        db.session.delete(item)
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback()  # Rollback on error
+        print(f"Error deleting gallery item: {e}")
+        return False

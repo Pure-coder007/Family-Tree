@@ -6,7 +6,7 @@ import traceback
 from utils import return_response, validate_request_data
 from models import (edit_member, email_exists, Moderators,
                     get_all_members, create_member_with_spouse,
-                    create_mod, get_family_chain, change_password, get_all_mods, update_mod)
+                    create_mod, get_family_chain, change_password, get_all_mods, update_mod, items_to_gallery, delete_gallery_item, Gallery)
 from decorators import super_admin_required
 import datetime
 import pprint
@@ -450,6 +450,112 @@ def change_password_route():
 
     except Exception as e:
         logging.error("Change password error: %s", e)
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+
+
+# Add images, event_name, event_year to gallery
+@account.route(f"{ACCOUNT_URL_PREFIX}/add_to_gallery", methods=["POST"])
+@jwt_required()
+def add_to_gallery():
+    try:
+        data = request.get_json()
+        fam_image = data.get("image")
+        fam_event_name = data.get("event_name")
+        fam_event_year = data.get("event_year")
+        if not fam_image:
+            return return_response(
+                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Image is required"
+            )
+        if not fam_event_name:
+            return return_response(
+                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Event name is required"
+            )
+        if not fam_event_year:
+            return return_response(
+                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Event year is required"
+            )
+        items_to_gallery(fam_image, fam_event_name, fam_event_year)
+        
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Items added to gallery"
+        )
+
+    except Exception as e:
+        print(traceback.format_exc(), "add to traceback")
+        logging.error("Add to gallery error: %s", e)
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+        
+        
+        
+# Get items from gallery
+@account.route(f"{ACCOUNT_URL_PREFIX}/get_gallery", methods=["GET"])
+@jwt_required()
+def get_gallery():
+    try:
+        galleries = Gallery.query.all() 
+        gallery_list = [g.to_dict() for g in galleries]
+        
+        return return_response(
+            HttpStatus.OK,
+            status=StatusRes.SUCCESS,
+            data=gallery_list,
+            message="Items gotten from gallery"
+        )
+    
+    except Exception as e:
+        logging.error("Get gallery error: %s", e)
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+
+# Delete items from gallery
+
+@account.route(f"{ACCOUNT_URL_PREFIX}/delete_gallery_item", methods=["DELETE"])
+@jwt_required()
+def delete_gallery():
+    try:
+        data = request.get_json()
+        gallery_id = data.get("id")
+        
+        if not gallery_id:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Item ID is required"
+            )
+        
+        success = delete_gallery_item(gallery_id)  
+        
+        if success:
+            return return_response(
+                HttpStatus.OK,
+                status=StatusRes.SUCCESS,
+                message="Gallery item deleted"
+            )
+        else:
+            return return_response(
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="Gallery item not found"
+            )
+
+    except Exception as e:
+        print(traceback.format_exc(), "Delete gallery item traceback")
+        logging.error("Delete gallery item error: %s", e)
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
