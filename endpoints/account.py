@@ -611,7 +611,7 @@ def add_to_logo():
 
         success = add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name)
         
-        success = add_or_update_logo(logo_image, logo_title, hero_image, story_year, ancestor_name, hero_text,
+        success = add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text,
                                      directory_image, clan_name)
 
         if success:
