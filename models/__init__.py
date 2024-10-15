@@ -137,7 +137,7 @@ class Gallery(db.Model):
     event_name = db.Column(db.String(50), nullable=True)
     image = db.Column(db.Text, nullable=True)
     event_year = db.Column(db.String(50), nullable=True)
-    
+
     def __init__(self, event_name, image, event_year):
         self.event_name = event_name
         self.image = image
@@ -150,7 +150,6 @@ class Gallery(db.Model):
             "image": self.image,
             "event_year": self.event_year
         }
-    
 
 
 class Logo(db.Model):
@@ -176,7 +175,7 @@ class Logo(db.Model):
         self.hero_text = hero_text
         self.directory_image = directory_image
         self.clan_name = clan_name
-        
+
     def to_dict(self):
         return {
             "id": self.id,
@@ -190,10 +189,6 @@ class Logo(db.Model):
             "directory_image": self.directory_image,
             "clan_name": self.clan_name
         }
-        
-        
-        
-
 
 
 class Moderators(db.Model):
@@ -686,7 +681,6 @@ def get_all_mods(page, per_page, fullname, email):
     return mods
 
 
-
 # Add images, event_year, event_name
 def items_to_gallery(fam_image, fam_event_name, fam_event_year):
     try:
@@ -698,9 +692,8 @@ def items_to_gallery(fam_image, fam_event_name, fam_event_year):
         db.session.rollback()  # Rollback on error
         print(f"Error adding to gallery: {e}")
         return False
-    
-    
-    
+
+
 # Get items from gallery
 def get_items_from_gallery():
     try:
@@ -710,16 +703,15 @@ def get_items_from_gallery():
     except Exception as e:
         print(f"Error getting items from gallery: {e}")
         return None
-    
-    
-    
+
+
 # Delete gallery item
 
 def delete_gallery_item(gallery_id):
     try:
         item = Gallery.query.filter_by(id=gallery_id).first()
         if not item:
-            return False 
+            return False
         db.session.delete(item)
         db.session.commit()
         return True
@@ -727,18 +719,17 @@ def delete_gallery_item(gallery_id):
         db.session.rollback()  # Rollback on error
         print(f"Error deleting gallery item: {e}")
         return False
+
+
 def get_one_fam_member(member_id):
     member = Member.query.filter_by(id=member_id).first()
     return member.to_dict()
 
 
-
-
-
 # Function to add or update logo items
 def add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
     try:
-        existing_logo = Logo.query.first() 
+        existing_logo = Logo.query.first()
 
         if existing_logo:
             existing_logo.logo_image = logo_image if logo_image else existing_logo.logo_image
@@ -767,6 +758,6 @@ def add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year
         db.session.commit()
         return True
     except Exception as e:
-        db.session.rollback() 
+        db.session.rollback()
         print(f"Error adding/updating logo: {e}")
         return False
