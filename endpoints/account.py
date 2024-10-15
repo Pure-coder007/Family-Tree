@@ -555,13 +555,10 @@ def get_gallery():
 
 # Delete items from gallery
 
-@account.route(f"{ACCOUNT_URL_PREFIX}/delete_gallery_item", methods=["DELETE"])
+@account.route(f"{ACCOUNT_URL_PREFIX}/delete_gallery_item/<gallery_id>", methods=["DELETE"])
 @jwt_required()
-def delete_gallery():
+def delete_gallery(gallery_id):  
     try:
-        data = request.get_json()
-        gallery_id = data.get("id")
-        
         if not gallery_id:
             return return_response(
                 HttpStatus.BAD_REQUEST,
@@ -592,7 +589,6 @@ def delete_gallery():
             status=StatusRes.FAILED,
             message="Network Error"
         )
-
 
 
 
