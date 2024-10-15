@@ -60,19 +60,20 @@ class Member(db.Model):
     # Relationships for spouses (as a husband and as a wife)
     husband_spouse = db.relationship("Spouse", foreign_keys="[Spouse.husband_id]", backref="husband_member",
                                      overlaps="spouse_as_husband")
+
     wife_spouse = db.relationship("Spouse", foreign_keys="[Spouse.wife_id]", backref="wife_member",
                                   overlaps="spouse_as_wife")
 
     other_spouses_as_member = db.relationship(
         "OtherSpouse",
-        backref="member_as_primary",  # Renamed backref for clarity
+        backref="member_as_primary",
         foreign_keys="[OtherSpouse.member_id]",
         lazy=True,
         overlaps="other_spouses_as_related"
     )
     other_spouses_as_related = db.relationship(
         "OtherSpouse",
-        backref="member_as_related",  # Renamed backref for clarity
+        backref="member_as_related",
         foreign_keys="[OtherSpouse.member_related_to]",
         lazy=True,
         overlaps="other_spouses_as_member"
@@ -81,10 +82,15 @@ class Member(db.Model):
     @hybrid_property
     def spouse(self):
         if self.spouse_as_husband:
-            return self.spouse_as_husband[0].wife
+            return self.spouse_as_husband[0].husband
         elif self.spouse_as_wife:
-            return self.spouse_as_wife[0].husband
+            print("spouse_as_wife")
+            return self.spouse_as_wife[0].wife
         return None
+
+    @hybrid_property
+    def other_spouses(self):
+        return self.other_spouses_as_member
 
     def __init__(self, first_name,
                  last_name, gender, img_str=None,
@@ -112,8 +118,12 @@ class Member(db.Model):
             "img_str": self.img_str,
             "phone_number": self.phone_number,
             "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
-            "status": self.status.value,
+            "user_status": self.status.value,
             "deceased_at": self.deceased_at.strftime("%d-%b-%Y") if self.deceased_at else None,
+            "occupation": self.occupation,
+            "birth_name": self.birth_name,
+            "birth_place": self.birth_place,
+            "story_line": self.story_line
         }
         return {key: value for key, value in member_dict.items() if value}
 
@@ -239,13 +249,14 @@ class Spouse(db.Model):
     date_created = db.Column(db.DateTime, server_default=db.func.now())
     date_updated = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
 
-    def to_dict(self):
+    def to_dict(self, member_id=None):
         return_dict = {
             "id": self.id,
-            "husband": self.husband.to_dict(),
-            "wife": self.wife.to_dict(),
-            "other_spouses": [other_spouse.to_dict() for other_spouse in self.other_spouses]
+            "husband": self.husband.to_dict() if self.husband else {},
+            "wife": self.wife.to_dict() if self.wife else {},
         }
+        if member_id and member_id == self.other_spouses[0].member_related_to:
+            return_dict["other_spouses"] = [other_spouse.to_dict() for other_spouse in self.other_spouses]
         return {key: value for key, value in return_dict.items() if value}
 
     def parent_to_dict(self):
@@ -270,14 +281,14 @@ class OtherSpouse(db.Model):
     member = db.relationship(
         "Member",
         foreign_keys=[member_id],
-        backref="primary_other_spouses",  # Changed backref name
-        overlaps="related_member,member_as_related"  # Specify overlaps here
+        backref="primary_other_spouses",
+        overlaps="member_as_primary,other_spouses_as_member"
     )
     related_member = db.relationship(
         "Member",
         foreign_keys=[member_related_to],
-        backref="related_other_spouses",  # Changed backref name
-        overlaps="member,member_as_primary"  # Specify overlaps here
+        backref="related_other_spouses",
+        overlaps="member_as_related,other_spouses_as_related"
     )
 
     def to_dict(self):
@@ -302,7 +313,7 @@ class Child(db.Model):
 
 def create_mod(email, password, fullname, is_super_admin=False):
     mod = Moderators(email=email, password=hasher.hash(password), is_super_admin=is_super_admin,
-                      fullname=fullname)
+                     fullname=fullname)
     db.session.add(mod)
     db.session.commit()
     return mod
@@ -314,7 +325,7 @@ def get_spouse_details(member_id):
         db.or_(Spouse.husband_id == member_id, Spouse.wife_id == member_id)
     ).first()
     if spouse:
-        return spouse.to_dict()
+        return spouse.to_dict(member_id)
     return {}
 
 
@@ -371,20 +382,38 @@ def create_member_with_spouse(data):
 
 
 def save_spouse_details(husband_id, wife_id, other_spouses, children):
+    print("husband_id", husband_id, "wife_id", wife_id)
     if other_spouses and not isinstance(other_spouses, list):
         return False, "other spouses must be an array"
     if children and not isinstance(children, list):
         return False, "children must be an array"
     # query for husband and wife
     spouse = Spouse.query.filter_by(husband_id=husband_id).first()
-    if not spouse:
-        spouse = Spouse.query.filter_by(wife_id=wife_id).first()
     if spouse:
+        print("found Husband")
+        # Update wife_id if spouse exists
         spouse.wife_id = wife_id
     else:
-        spouse = Spouse(husband_id=husband_id, wife_id=wife_id)
-        db.session.add(spouse)
-    db.session.commit()
+        print("not found husband")
+        # Try to find a spouse by wife_id
+        spouse = Spouse.query.filter_by(wife_id=wife_id).first()
+        if spouse:
+            print("found wife")
+            # Update husband_id if spouse exists
+            spouse.husband_id = husband_id
+        else:
+            print("creating new spouse")
+            # Create a new Spouse record if neither exists
+            spouse = Spouse(husband_id=husband_id, wife_id=wife_id)
+            db.session.add(spouse)
+
+        # Commit the changes to the database
+    try:
+        db.session.commit()
+    except Exception as e:
+        print(e, "error from save_spouse_details")
+        db.session.rollback()
+        return False
     if other_spouses:
         for other_spouse in other_spouses:
             member = save_member(other_spouse)
@@ -450,13 +479,26 @@ def edit_member(member_id, payload):
 
     if payload.get("spouse"):
         sec_mem = save_member(payload.get("spouse"))
-        if member.gender == Gender.female:
+        if member.gender == Gender.male:
             wife_id = sec_mem.id
             husband_id = member.id
+            # print("this is female", wife_id, husband_id)
         else:
             wife_id = member.id
             husband_id = sec_mem.id
+            # print("this is male", wife_id, husband_id)
         save_spouse_details(husband_id, wife_id, payload.get("other_spouses"), payload.get("children"))
+    spouse = Spouse.query.filter_by(husband_id=member.id).first() or Spouse.query.filter_by(wife_id=member.id).first()
+    if not payload.get("spouse") and payload.get("other_spouses"):
+        for other_spouse in payload.get("other_spouses"):
+            member = save_member(other_spouse)
+            member_related_to = member_id
+            save_other_spouses(member.id, member_related_to,
+                               other_spouse["relationship_type"], spouse.id)
+    if not payload.get("spouse") and not payload.get("other_spouses") and payload.get("children"):
+        for child in payload.get("children"):
+            child_member = save_member(child)
+            save_child(child_member.id, spouse.id, child["child_type"])
     db.session.commit()
     return member
 
@@ -483,6 +525,20 @@ def get_parents(spouse_id):
     return None
 
 
+def get_related_spouse(member_id, member_relate_id):
+    spouse = OtherSpouse.query.filter_by(member_related_to=member_relate_id,
+                                         member_id=member_id).first()
+    if spouse:
+        return {
+            "husband": spouse.related_member.to_dict(),
+            "wife": spouse.member.to_dict()
+        } if spouse.member.gender == Gender.female else {
+            "husband": spouse.member.to_dict(),
+            "wife": spouse.related_member.to_dict()
+        }
+    return {}
+
+
 def get_family_chain(member_id):
     member = Member.query.filter_by(id=member_id).first()
     if not member:
@@ -492,13 +548,23 @@ def get_family_chain(member_id):
     if member.child:
         parent = get_parents(member.child.spouse_id)
         family_chain["parents"] = parent
+        family_chain["child"] = member.to_dict()
 
     # get spouse details
     if member.spouse:
+        print("gotten")
         spouse = get_spouse_details(member_id)
         children = get_children(spouse["id"])
         family_chain["spouse"] = spouse
         family_chain["children"] = children
+
+        # remove the child key
+        if "child" in family_chain:
+            del family_chain["child"]
+
+    if member.other_spouses:
+        spouse = get_related_spouse(member_id, member.other_spouses[0].member_related_to)
+        family_chain["spouse"] = spouse
 
     return family_chain
 
@@ -519,7 +585,7 @@ def create_otp_token(mod_id, otp=None, token=None):
             db.session.commit()
         else:
             mod_session = ModSession(mod_id=mod_id, otp=otp,
-                                       otp_expires_at=datetime.now() + timedelta(minutes=10))
+                                     otp_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(mod_session)
             db.session.commit()
         return mod_session
@@ -531,7 +597,7 @@ def create_otp_token(mod_id, otp=None, token=None):
             db.session.commit()
         else:
             mod_session = ModSession(mod_id=mod_id, token=token,
-                                       token_expires_at=datetime.now() + timedelta(minutes=10))
+                                     token_expires_at=datetime.now() + timedelta(minutes=10))
             db.session.add(mod_session)
             db.session.commit()
         return mod_session
@@ -591,11 +657,13 @@ def update_mod(mod_id, delete=False, **kwargs):
 def change_password(mod_id, old_password, new_password):
     mod = Moderators.query.filter_by(id=mod_id).first()
     if not mod or not hasher.verify(old_password, mod.password):
-        return False  
+        return False
 
     mod.password = hasher.hash(new_password)
     db.session.commit()
     return True
+
+
 # get all mods
 def get_all_mods(page, per_page, fullname, email):
     mods = Moderators.query
@@ -655,3 +723,6 @@ def delete_gallery_item(gallery_id):
         db.session.rollback()  # Rollback on error
         print(f"Error deleting gallery item: {e}")
         return False
+def get_one_fam_member(member_id):
+    member = Member.query.filter_by(id=member_id).first()
+    return member.to_dict()
