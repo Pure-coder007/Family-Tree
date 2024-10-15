@@ -147,7 +147,8 @@ class Gallery(db.Model):
         return {
             "id": self.id,
             "event_name": self.event_name,
-            "image": self.image
+            "image": self.image,
+            "event_year": self.event_year
         }
     
 

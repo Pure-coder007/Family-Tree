@@ -530,7 +530,11 @@ def add_to_gallery():
 def get_gallery():
     try:
         galleries = Gallery.query.all() 
+        
+        print("Getting items from gallery", galleries)
         gallery_list = [g.to_dict() for g in galleries]
+        
+        print(gallery_list)
         
         return return_response(
             HttpStatus.OK,
