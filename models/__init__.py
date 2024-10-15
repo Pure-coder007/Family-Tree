@@ -726,3 +726,41 @@ def delete_gallery_item(gallery_id):
 def get_one_fam_member(member_id):
     member = Member.query.filter_by(id=member_id).first()
     return member.to_dict()
+
+
+
+
+
+# Function to add or update logo items
+def add_or_update_logo(logo_image, logo_title, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
+    try:
+        existing_logo = Logo.query.first() 
+
+        if existing_logo:
+            existing_logo.logo_image = logo_image if logo_image else existing_logo.logo_image
+            existing_logo.logo_title = logo_title if logo_title else existing_logo.logo_title
+            existing_logo.hero_image = hero_image if hero_image else existing_logo.hero_image
+            existing_logo.story_year = story_year if story_year else existing_logo.story_year
+            existing_logo.ancestor_name = ancestor_name if ancestor_name else existing_logo.ancestor_name
+            existing_logo.hero_text = hero_text if hero_text else existing_logo.hero_text
+            existing_logo.directory_image = directory_image if directory_image else existing_logo.directory_image
+            existing_logo.clan_name = clan_name if clan_name else existing_logo.clan_name
+        else:
+            existing_logo = Logo(
+                logo_image=logo_image,
+                logo_title=logo_title,
+                hero_image=hero_image,
+                story_year=story_year,
+                ancestor_name=ancestor_name,
+                hero_text=hero_text,
+                directory_image=directory_image,
+                clan_name=clan_name
+            )
+            db.session.add(existing_logo)
+
+        db.session.commit()
+        return True
+    except Exception as e:
+        db.session.rollback() 
+        print(f"Error adding/updating logo: {e}")
+        return False

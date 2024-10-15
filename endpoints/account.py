@@ -8,7 +8,7 @@ from models import (edit_member, email_exists, Moderators,
                     get_all_members, create_member_with_spouse,
                     create_mod, get_family_chain, change_password, get_all_mods, update_mod, items_to_gallery, delete_gallery_item, Gallery,
                     create_mod, get_family_chain, change_password,
-                    get_all_mods, update_mod, get_one_fam_member)
+                    get_all_mods, update_mod, get_one_fam_member, add_or_update_logo)
 from decorators import super_admin_required
 import datetime
 import pprint
@@ -583,6 +583,57 @@ def delete_gallery():
     except Exception as e:
         print(traceback.format_exc(), "Delete gallery item traceback")
         logging.error("Delete gallery item error: %s", e)
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error"
+        )
+
+
+
+
+
+
+@account.route(f"{ACCOUNT_URL_PREFIX}/add_to_logo", methods=["POST"])
+@jwt_required()
+def add_to_logo():
+    try:
+        data = request.get_json()
+        
+        logo_image = data.get("logo_image")
+        logo_title = data.get("logo_title")
+        hero_image = data.get("hero_image")
+        story_year = data.get("story_year")
+        ancestor_name = data.get("ancestor_name")
+        hero_text = data.get("hero_text")
+        directory_image = data.get("directory_image")
+        clan_name = data.get("clan_name")
+
+        if not logo_image and not logo_title:
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="At least logo image or title is required"
+            )
+
+        success = add_or_update_logo(logo_image, logo_title, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name)
+        
+        if success:
+            return return_response(
+                HttpStatus.OK,
+                status=StatusRes.SUCCESS,
+                message="Logo items added / updated successfully"
+            )
+        else:
+            return return_response(
+                HttpStatus.INTERNAL_SERVER_ERROR,
+                status=StatusRes.FAILED,
+                message="Failed to add/update logo items"
+            )
+
+    except Exception as e:
+        print(traceback.format_exc(), "Add to logo traceback")
+        logging.error("Add to logo error: %s", e)
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
