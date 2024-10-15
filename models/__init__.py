@@ -761,3 +761,8 @@ def add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year
         db.session.rollback()
         print(f"Error adding/updating logo: {e}")
         return False
+
+
+def get_logo_details():
+    logo = Logo.query.first()
+    return logo.to_dict()

@@ -9,7 +9,7 @@ from models import (edit_member, email_exists, Moderators,
                     create_mod, get_family_chain, change_password, get_all_mods, update_mod, items_to_gallery,
                     delete_gallery_item, Gallery,
                     create_mod, get_family_chain, change_password,
-                    get_all_mods, update_mod, get_one_fam_member, add_or_update_logo)
+                    get_all_mods, update_mod, get_one_fam_member, add_or_update_logo, get_logo_details)
 from decorators import super_admin_required
 import datetime
 import pprint
@@ -586,10 +586,19 @@ def delete_gallery(gallery_id):
         )
 
 
-@account.route(f"{ACCOUNT_URL_PREFIX}/add_to_logo", methods=["POST"])
+@account.route(f"{ACCOUNT_URL_PREFIX}/add_to_logo", methods=["GET", "POST"])
 @jwt_required()
 def add_to_logo():
     try:
+        if request.method == "GET":
+            data = get_logo_details()
+
+            return return_response(
+                HttpStatus.OK,
+                status=StatusRes.SUCCESS,
+                **data
+            )
+            
         data = request.get_json()
 
         logo_image = data.get("logo_image")
@@ -609,8 +618,6 @@ def add_to_logo():
                 message="At least logo image or title is required"
             )
 
-        success = add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name)
-        
         success = add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text,
                                      directory_image, clan_name)
 
