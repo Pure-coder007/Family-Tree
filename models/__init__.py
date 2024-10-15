@@ -158,6 +158,7 @@ class Logo(db.Model):
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
     logo_image = db.Column(db.Text, nullable=True)
     logo_title = db.Column(db.String(50), nullable=True)
+    full_name = db.Column(db.String(50), nullable=True)
     hero_image = db.Column(db.Text, nullable=True)
     story_year = db.Column(db.Integer, nullable=True)
     ancestor_name = db.Column(db.String(50), nullable=True)
@@ -165,9 +166,10 @@ class Logo(db.Model):
     directory_image = db.Column(db.Text, nullable=True)
     clan_name = db.Column(db.String(50), nullable=True)
     
-    def __init__(self, logo_image, logo_title, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
+    def __init__(self, logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
         self.logo_image = logo_image
         self.logo_title = logo_title
+        self.full_name = full_name
         self.hero_image = hero_image
         self.story_year = story_year
         self.ancestor_name = ancestor_name
@@ -180,6 +182,7 @@ class Logo(db.Model):
             "id": self.id,
             "logo_image": self.logo_image,
             "logo_title": self.logo_title,
+            "full_name": self.full_name,
             "hero_image": self.hero_image,
             "story_year": self.story_year,
             "ancestor_name": self.ancestor_name,
@@ -733,13 +736,14 @@ def get_one_fam_member(member_id):
 
 
 # Function to add or update logo items
-def add_or_update_logo(logo_image, logo_title, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
+def add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
     try:
         existing_logo = Logo.query.first() 
 
         if existing_logo:
             existing_logo.logo_image = logo_image if logo_image else existing_logo.logo_image
             existing_logo.logo_title = logo_title if logo_title else existing_logo.logo_title
+            existing_logo.full_name = full_name if full_name else existing_logo.full_name
             existing_logo.hero_image = hero_image if hero_image else existing_logo.hero_image
             existing_logo.story_year = story_year if story_year else existing_logo.story_year
             existing_logo.ancestor_name = ancestor_name if ancestor_name else existing_logo.ancestor_name
@@ -750,6 +754,7 @@ def add_or_update_logo(logo_image, logo_title, hero_image, story_year, ancestor_
             existing_logo = Logo(
                 logo_image=logo_image,
                 logo_title=logo_title,
+                full_name = full_name,
                 hero_image=hero_image,
                 story_year=story_year,
                 ancestor_name=ancestor_name,

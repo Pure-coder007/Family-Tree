@@ -602,6 +602,7 @@ def add_to_logo():
         
         logo_image = data.get("logo_image")
         logo_title = data.get("logo_title")
+        full_name = data.get("full_name")
         hero_image = data.get("hero_image")
         story_year = data.get("story_year")
         ancestor_name = data.get("ancestor_name")
@@ -616,7 +617,7 @@ def add_to_logo():
                 message="At least logo image or title is required"
             )
 
-        success = add_or_update_logo(logo_image, logo_title, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name)
+        success = add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name)
         
         if success:
             return return_response(
