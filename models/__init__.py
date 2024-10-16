@@ -6,6 +6,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 import re
 import datetime
 from utils import hex_uuid
+
 # from datetime import datetime
 from datetime import datetime, timedelta, date
 
@@ -55,28 +56,38 @@ class Member(db.Model):
     birth_name = db.Column(db.String(150), nullable=True)
     story_line = db.Column(db.Text, nullable=True)
     created_at = db.Column(db.DateTime, server_default=db.func.now())
-    updated_at = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+    updated_at = db.Column(
+        db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now()
+    )
     child = db.relationship("Child", backref="member", lazy=True, uselist=False)
     # Relationships for spouses (as a husband and as a wife)
-    husband_spouse = db.relationship("Spouse", foreign_keys="[Spouse.husband_id]", backref="husband_member",
-                                     overlaps="spouse_as_husband")
+    husband_spouse = db.relationship(
+        "Spouse",
+        foreign_keys="[Spouse.husband_id]",
+        backref="husband_member",
+        overlaps="spouse_as_husband",
+    )
 
-    wife_spouse = db.relationship("Spouse", foreign_keys="[Spouse.wife_id]", backref="wife_member",
-                                  overlaps="spouse_as_wife")
+    wife_spouse = db.relationship(
+        "Spouse",
+        foreign_keys="[Spouse.wife_id]",
+        backref="wife_member",
+        overlaps="spouse_as_wife",
+    )
 
     other_spouses_as_member = db.relationship(
         "OtherSpouse",
         backref="member_as_primary",
         foreign_keys="[OtherSpouse.member_id]",
         lazy=True,
-        overlaps="other_spouses_as_related"
+        overlaps="other_spouses_as_related",
     )
     other_spouses_as_related = db.relationship(
         "OtherSpouse",
         backref="member_as_related",
         foreign_keys="[OtherSpouse.member_related_to]",
         lazy=True,
-        overlaps="other_spouses_as_member"
+        overlaps="other_spouses_as_member",
     )
 
     @hybrid_property
@@ -92,11 +103,20 @@ class Member(db.Model):
     def other_spouses(self):
         return self.other_spouses_as_member
 
-    def __init__(self, first_name,
-                 last_name, gender, img_str=None,
-                 phone_number=None, dob=None, status=None, deceased_at=None,
-                 occupation=None,
-                 birth_place=None, birth_name=None):
+    def __init__(
+        self,
+        first_name,
+        last_name,
+        gender,
+        img_str=None,
+        phone_number=None,
+        dob=None,
+        status=None,
+        deceased_at=None,
+        occupation=None,
+        birth_place=None,
+        birth_name=None,
+    ):
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
         self.gender = Gender(gender.title())
@@ -119,11 +139,13 @@ class Member(db.Model):
             "phone_number": self.phone_number,
             "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
             "user_status": self.status.value,
-            "deceased_at": self.deceased_at.strftime("%d-%b-%Y") if self.deceased_at else None,
+            "deceased_at": (
+                self.deceased_at.strftime("%d-%b-%Y") if self.deceased_at else None
+            ),
             "occupation": self.occupation,
             "birth_name": self.birth_name,
             "birth_place": self.birth_place,
-            "story_line": self.story_line
+            "story_line": self.story_line,
         }
         return {key: value for key, value in member_dict.items() if value}
 
@@ -148,7 +170,7 @@ class Gallery(db.Model):
             "id": self.id,
             "event_name": self.event_name,
             "image": self.image,
-            "event_year": self.event_year
+            "event_year": self.event_year,
         }
 
 
@@ -164,8 +186,19 @@ class Logo(db.Model):
     hero_text = db.Column(db.Text, nullable=True)
     directory_image = db.Column(db.Text, nullable=True)
     clan_name = db.Column(db.String(50), nullable=True)
-    
-    def __init__(self, logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
+
+    def __init__(
+        self,
+        logo_image,
+        logo_title,
+        full_name,
+        hero_image,
+        story_year,
+        ancestor_name,
+        hero_text,
+        directory_image,
+        clan_name,
+    ):
         self.logo_image = logo_image
         self.logo_title = logo_title
         self.full_name = full_name
@@ -187,7 +220,7 @@ class Logo(db.Model):
             "ancestor_name": self.ancestor_name,
             "hero_text": self.hero_text,
             "directory_image": self.directory_image,
-            "clan_name": self.clan_name
+            "clan_name": self.clan_name,
         }
 
 
@@ -210,12 +243,12 @@ class Moderators(db.Model):
             "fullname": self.fullname,
             "email": self.email,
             "is_super_admin": self.is_super_admin,
-            "status": self.status
+            "status": self.status,
         }
 
     @staticmethod
     def validate_email(email):
-        regex = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        regex = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         if re.fullmatch(regex, email):
             return True
         return False
@@ -237,16 +270,26 @@ class ModSession(db.Model):
 class Spouse(db.Model):
     __tablename__ = "spouse"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    husband_id = db.Column(db.String(50), db.ForeignKey('member.id'))
-    wife_id = db.Column(db.String(50), db.ForeignKey('member.id'))
+    husband_id = db.Column(db.String(50), db.ForeignKey("member.id"))
+    wife_id = db.Column(db.String(50), db.ForeignKey("member.id"))
     other_spouses = db.relationship("OtherSpouse", backref="spouse", lazy=True)
     children = db.relationship("Child", backref="spouse", lazy=True)
-    husband = db.relationship("Member", foreign_keys=[husband_id], backref="spouse_as_husband",
-                              overlaps="husband_spouse,husband_member")
-    wife = db.relationship("Member", foreign_keys=[wife_id], backref="spouse_as_wife",
-                           overlaps="wife_spouse,wife_member")
+    husband = db.relationship(
+        "Member",
+        foreign_keys=[husband_id],
+        backref="spouse_as_husband",
+        overlaps="husband_spouse,husband_member",
+    )
+    wife = db.relationship(
+        "Member",
+        foreign_keys=[wife_id],
+        backref="spouse_as_wife",
+        overlaps="wife_spouse,wife_member",
+    )
     date_created = db.Column(db.DateTime, server_default=db.func.now())
-    date_updated = db.Column(db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now())
+    date_updated = db.Column(
+        db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now()
+    )
 
     def to_dict(self, member_id=None):
         return_dict = {
@@ -255,7 +298,9 @@ class Spouse(db.Model):
             "wife": self.wife.to_dict() if self.wife else {},
         }
         if member_id and member_id == self.other_spouses[0].member_related_to:
-            return_dict["other_spouses"] = [other_spouse.to_dict() for other_spouse in self.other_spouses]
+            return_dict["other_spouses"] = [
+                other_spouse.to_dict() for other_spouse in self.other_spouses
+            ]
         return {key: value for key, value in return_dict.items() if value}
 
     def parent_to_dict(self):
@@ -272,22 +317,22 @@ class Spouse(db.Model):
 class OtherSpouse(db.Model):
     __tablename__ = "other_spouse"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    member_id = db.Column(db.String(50), db.ForeignKey('member.id'))
-    member_related_to = db.Column(db.String(50), db.ForeignKey('member.id'))
+    member_id = db.Column(db.String(50), db.ForeignKey("member.id"))
+    member_related_to = db.Column(db.String(50), db.ForeignKey("member.id"))
     relationship_type = db.Column(SQLAlchemyEnum(RelationshipType))
-    spouse_id = db.Column(db.String(50), db.ForeignKey('spouse.id'))
+    spouse_id = db.Column(db.String(50), db.ForeignKey("spouse.id"))
 
     member = db.relationship(
         "Member",
         foreign_keys=[member_id],
         backref="primary_other_spouses",
-        overlaps="member_as_primary,other_spouses_as_member"
+        overlaps="member_as_primary,other_spouses_as_member",
     )
     related_member = db.relationship(
         "Member",
         foreign_keys=[member_related_to],
         backref="related_other_spouses",
-        overlaps="member_as_related,other_spouses_as_related"
+        overlaps="member_as_related,other_spouses_as_related",
     )
 
     def to_dict(self):
@@ -295,15 +340,17 @@ class OtherSpouse(db.Model):
             "id": self.id,
             "relationship_type": self.relationship_type.value,
             "member": self.member.to_dict() if self.member else None,
-            "related_member": self.related_member.to_dict() if self.related_member else None
+            "related_member": (
+                self.related_member.to_dict() if self.related_member else None
+            ),
         }
 
 
 class Child(db.Model):
     __tablename__ = "child"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
-    member_id = db.Column(db.String(50), db.ForeignKey('member.id'))
-    spouse_id = db.Column(db.String(50), db.ForeignKey('spouse.id'))
+    member_id = db.Column(db.String(50), db.ForeignKey("member.id"))
+    spouse_id = db.Column(db.String(50), db.ForeignKey("spouse.id"))
     child_type = db.Column(SQLAlchemyEnum(ChildType))
 
     def to_dict(self):
@@ -311,8 +358,12 @@ class Child(db.Model):
 
 
 def create_mod(email, password, fullname, is_super_admin=False):
-    mod = Moderators(email=email, password=hasher.hash(password), is_super_admin=is_super_admin,
-                     fullname=fullname)
+    mod = Moderators(
+        email=email,
+        password=hasher.hash(password),
+        is_super_admin=is_super_admin,
+        fullname=fullname,
+    )
     db.session.add(mod)
     db.session.commit()
     return mod
@@ -333,7 +384,9 @@ def save_member(payload):
         payload["dob"] = datetime.strptime(payload.get("dob"), "%d-%m-%Y").date()
 
     if payload.get("deceased_at") and not isinstance(payload.get("deceased_at"), date):
-        payload["deceased_at"] = datetime.strptime(payload.get("deceased_at"), "%d-%m-%Y").date()
+        payload["deceased_at"] = datetime.strptime(
+            payload.get("deceased_at"), "%d-%m-%Y"
+        ).date()
     member = Member(
         first_name=payload.get("first_name"),
         last_name=payload.get("last_name"),
@@ -345,7 +398,7 @@ def save_member(payload):
         phone_number=payload.get("phone_number"),
         occupation=payload.get("occupation"),
         birth_place=payload.get("birth_place"),
-        birth_name=payload.get("birth_name")
+        birth_name=payload.get("birth_name"),
     )
 
     db.session.add(member)
@@ -376,7 +429,9 @@ def create_member_with_spouse(data):
 
     print(husband_id, "the husband id")
     print(wife_id, "the wife id")
-    res, err = save_spouse_details(husband_id, wife_id, data.get("other_spouses"), data.get("children"))
+    res, err = save_spouse_details(
+        husband_id, wife_id, data.get("other_spouses"), data.get("children")
+    )
     return res, err
 
 
@@ -420,8 +475,12 @@ def save_spouse_details(husband_id, wife_id, other_spouses, children):
                 member_related_to = husband_id or wife_id
             else:
                 member_related_to = wife_id or husband_id
-            save_other_spouses(member.id, member_related_to,
-                               other_spouse["relationship_type"], spouse.id)
+            save_other_spouses(
+                member.id,
+                member_related_to,
+                other_spouse["relationship_type"],
+                spouse.id,
+            )
     if children:
         for child in children:
             child_member = save_member(child)
@@ -430,15 +489,23 @@ def save_spouse_details(husband_id, wife_id, other_spouses, children):
 
 
 def save_other_spouses(member_id, member_related_to, relationship_type, spouse_id):
-    other_spouse = OtherSpouse(member_id=member_id, member_related_to=member_related_to,
-                               relationship_type=RelationshipType(relationship_type.title()), spouse_id=spouse_id)
+    other_spouse = OtherSpouse(
+        member_id=member_id,
+        member_related_to=member_related_to,
+        relationship_type=RelationshipType(relationship_type.title()),
+        spouse_id=spouse_id,
+    )
     db.session.add(other_spouse)
     db.session.commit()
     return other_spouse
 
 
 def save_child(member_id, spouse_id, child_type):
-    child = Child(member_id=member_id, spouse_id=spouse_id, child_type=ChildType(child_type.title()))
+    child = Child(
+        member_id=member_id,
+        spouse_id=spouse_id,
+        child_type=ChildType(child_type.title()),
+    )
     db.session.add(child)
     db.session.commit()
     return child
@@ -486,15 +553,28 @@ def edit_member(member_id, payload):
             wife_id = member.id
             husband_id = sec_mem.id
             # print("this is male", wife_id, husband_id)
-        save_spouse_details(husband_id, wife_id, payload.get("other_spouses"), payload.get("children"))
-    spouse = Spouse.query.filter_by(husband_id=member.id).first() or Spouse.query.filter_by(wife_id=member.id).first()
+        save_spouse_details(
+            husband_id, wife_id, payload.get("other_spouses"), payload.get("children")
+        )
+    spouse = (
+        Spouse.query.filter_by(husband_id=member.id).first()
+        or Spouse.query.filter_by(wife_id=member.id).first()
+    )
     if not payload.get("spouse") and payload.get("other_spouses"):
         for other_spouse in payload.get("other_spouses"):
             member = save_member(other_spouse)
             member_related_to = member_id
-            save_other_spouses(member.id, member_related_to,
-                               other_spouse["relationship_type"], spouse.id)
-    if not payload.get("spouse") and not payload.get("other_spouses") and payload.get("children"):
+            save_other_spouses(
+                member.id,
+                member_related_to,
+                other_spouse["relationship_type"],
+                spouse.id,
+            )
+    if (
+        not payload.get("spouse")
+        and not payload.get("other_spouses")
+        and payload.get("children")
+    ):
         for child in payload.get("children"):
             child_member = save_member(child)
             save_child(child_member.id, spouse.id, child["child_type"])
@@ -517,24 +597,26 @@ def get_other_spouses(spouse_id):
 def get_parents(spouse_id):
     parents = Spouse.query.filter_by(id=spouse_id).first()
     if parents:
-        return {
-            "father": parents.husband.to_dict(),
-            "mother": parents.wife.to_dict()
-        }
+        return {"father": parents.husband.to_dict(), "mother": parents.wife.to_dict()}
     return None
 
 
 def get_related_spouse(member_id, member_relate_id):
-    spouse = OtherSpouse.query.filter_by(member_related_to=member_relate_id,
-                                         member_id=member_id).first()
+    spouse = OtherSpouse.query.filter_by(
+        member_related_to=member_relate_id, member_id=member_id
+    ).first()
     if spouse:
-        return {
-            "husband": spouse.related_member.to_dict(),
-            "wife": spouse.member.to_dict()
-        } if spouse.member.gender == Gender.female else {
-            "husband": spouse.member.to_dict(),
-            "wife": spouse.related_member.to_dict()
-        }
+        return (
+            {
+                "husband": spouse.related_member.to_dict(),
+                "wife": spouse.member.to_dict(),
+            }
+            if spouse.member.gender == Gender.female
+            else {
+                "husband": spouse.member.to_dict(),
+                "wife": spouse.related_member.to_dict(),
+            }
+        )
     return {}
 
 
@@ -562,7 +644,9 @@ def get_family_chain(member_id):
             del family_chain["child"]
 
     if member.other_spouses:
-        spouse = get_related_spouse(member_id, member.other_spouses[0].member_related_to)
+        spouse = get_related_spouse(
+            member_id, member.other_spouses[0].member_related_to
+        )
         family_chain["spouse"] = spouse
 
     return family_chain
@@ -583,8 +667,11 @@ def create_otp_token(mod_id, otp=None, token=None):
             mod_session.otp_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
-            mod_session = ModSession(mod_id=mod_id, otp=otp,
-                                     otp_expires_at=datetime.now() + timedelta(minutes=10))
+            mod_session = ModSession(
+                mod_id=mod_id,
+                otp=otp,
+                otp_expires_at=datetime.now() + timedelta(minutes=10),
+            )
             db.session.add(mod_session)
             db.session.commit()
         return mod_session
@@ -595,8 +682,11 @@ def create_otp_token(mod_id, otp=None, token=None):
             mod_session.token_expires_at = datetime.now() + timedelta(minutes=10)
             db.session.commit()
         else:
-            mod_session = ModSession(mod_id=mod_id, token=token,
-                                     token_expires_at=datetime.now() + timedelta(minutes=10))
+            mod_session = ModSession(
+                mod_id=mod_id,
+                token=token,
+                token_expires_at=datetime.now() + timedelta(minutes=10),
+            )
             db.session.add(mod_session)
             db.session.commit()
         return mod_session
@@ -622,10 +712,12 @@ def get_all_members(page, per_page, fullname):
         members = members.filter(
             db.or_(
                 Member.first_name.ilike(f"%{fullname}%"),
-                Member.last_name.ilike(f"%{fullname}%")
+                Member.last_name.ilike(f"%{fullname}%"),
             )
         )
-    members = members.order_by(Member.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    members = members.order_by(Member.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
 
     return members
 
@@ -667,16 +759,14 @@ def change_password(mod_id, old_password, new_password):
 def get_all_mods(page, per_page, fullname, email):
     mods = Moderators.query
     if fullname:
-        mods = mods.filter(
-            Moderators.fullname.ilike(f"%{fullname}%")
-        )
+        mods = mods.filter(Moderators.fullname.ilike(f"%{fullname}%"))
 
     if email:
-        mods = mods.filter(
-            Moderators.email.ilike(f"%{email}%")
-        )
+        mods = mods.filter(Moderators.email.ilike(f"%{email}%"))
 
-    mods = mods.order_by(Moderators.fullname.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    mods = mods.order_by(Moderators.fullname.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
 
     return mods
 
@@ -684,7 +774,9 @@ def get_all_mods(page, per_page, fullname, email):
 # Add images, event_year, event_name
 def items_to_gallery(fam_image, fam_event_name, fam_event_year):
     try:
-        gall = Gallery(image=fam_image, event_name=fam_event_name, event_year=fam_event_year)
+        gall = Gallery(
+            image=fam_image, event_name=fam_event_name, event_year=fam_event_year
+        )
         db.session.add(gall)
         db.session.commit()
         return True
@@ -707,6 +799,7 @@ def get_items_from_gallery():
 
 # Delete gallery item
 
+
 def delete_gallery_item(gallery_id):
     try:
         item = Gallery.query.filter_by(id=gallery_id).first()
@@ -727,31 +820,59 @@ def get_one_fam_member(member_id):
 
 
 # Function to add or update logo items
-def add_or_update_logo(logo_image, logo_title, full_name, hero_image, story_year, ancestor_name, hero_text, directory_image, clan_name):
+def add_or_update_logo(
+    logo_image,
+    logo_title,
+    full_name,
+    hero_image,
+    story_year,
+    ancestor_name,
+    hero_text,
+    directory_image,
+    clan_name,
+):
     try:
         existing_logo = Logo.query.first()
 
         if existing_logo:
-            existing_logo.logo_image = logo_image if logo_image else existing_logo.logo_image
-            existing_logo.logo_title = logo_title if logo_title else existing_logo.logo_title
-            existing_logo.full_name = full_name if full_name else existing_logo.full_name
-            existing_logo.hero_image = hero_image if hero_image else existing_logo.hero_image
-            existing_logo.story_year = story_year if story_year else existing_logo.story_year
-            existing_logo.ancestor_name = ancestor_name if ancestor_name else existing_logo.ancestor_name
-            existing_logo.hero_text = hero_text if hero_text else existing_logo.hero_text
-            existing_logo.directory_image = directory_image if directory_image else existing_logo.directory_image
-            existing_logo.clan_name = clan_name if clan_name else existing_logo.clan_name
+            existing_logo.logo_image = (
+                logo_image if logo_image else existing_logo.logo_image
+            )
+            existing_logo.logo_title = (
+                logo_title if logo_title else existing_logo.logo_title
+            )
+            existing_logo.full_name = (
+                full_name if full_name else existing_logo.full_name
+            )
+            existing_logo.hero_image = (
+                hero_image if hero_image else existing_logo.hero_image
+            )
+            existing_logo.story_year = (
+                story_year if story_year else existing_logo.story_year
+            )
+            existing_logo.ancestor_name = (
+                ancestor_name if ancestor_name else existing_logo.ancestor_name
+            )
+            existing_logo.hero_text = (
+                hero_text if hero_text else existing_logo.hero_text
+            )
+            existing_logo.directory_image = (
+                directory_image if directory_image else existing_logo.directory_image
+            )
+            existing_logo.clan_name = (
+                clan_name if clan_name else existing_logo.clan_name
+            )
         else:
             existing_logo = Logo(
                 logo_image=logo_image,
                 logo_title=logo_title,
-                full_name = full_name,
+                full_name=full_name,
                 hero_image=hero_image,
                 story_year=story_year,
                 ancestor_name=ancestor_name,
                 hero_text=hero_text,
                 directory_image=directory_image,
-                clan_name=clan_name
+                clan_name=clan_name,
             )
             db.session.add(existing_logo)
 
