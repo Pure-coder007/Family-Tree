@@ -6,7 +6,7 @@ from datetime import datetime
 from utils import return_response, return_access_token, generate_otp
 from models import verify_mod_login, get_mod_by_email, valid_email, create_otp_token
 
-auth = Blueprint('auth', __name__)
+auth = Blueprint("auth", __name__)
 
 AUTH_URL_PREFIX = "/auth"
 
@@ -24,34 +24,34 @@ def login():
     try:
         email = request.json.get("email")
         password = request.json.get("password")
-        
+
         if not email or not password:
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
-                message="Email and password are required"
+                message="Email and password are required",
             )
 
         email = email.lower()
-        
+
         mod = verify_mod_login(email, password)
-        
+
         if not mod:
             return return_response(
                 HttpStatus.UNAUTHORIZED,
                 status=StatusRes.FAILED,
-                message="Invalid credentials"
+                message="Invalid credentials",
             )
 
         if mod.status != "active":
             return return_response(
                 HttpStatus.UNAUTHORIZED,
                 status=StatusRes.FAILED,
-                message="Your account is not active. Please contact the super admin"
+                message="Your account is not active. Please contact the super admin",
             )
-        
+
         access_token = return_access_token(mod.id)
-        
+
         # Prepare mod details to return
         mod_details = {
             "id": mod.id,
@@ -59,14 +59,14 @@ def login():
             "email": mod.email,
             "is_super_admin": mod.is_super_admin,
             "status": mod.status,
-            }
-        
+        }
+
         return return_response(
             HttpStatus.OK,
             status=StatusRes.SUCCESS,
             message="Login successful",
-            access_token=access_token, 
-            mod_details=mod_details
+            access_token=access_token,
+            mod_details=mod_details,
         )
     except Exception as e:
         print(traceback.format_exc(), "login traceback")
@@ -74,7 +74,7 @@ def login():
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
-            message="Network Error"
+            message="Network Error",
         )
 
 
@@ -87,7 +87,9 @@ def forget_password():
         email = data.get("email")
         if not email:
             return return_response(
-                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Email is required"
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Email is required",
             )
         if not valid_email(email):
             return return_response(
@@ -96,7 +98,9 @@ def forget_password():
         mod = get_mod_by_email(email)
         if not mod:
             return return_response(
-                HttpStatus.NOT_FOUND, status=StatusRes.FAILED, message="Account not found"
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="Account not found",
             )
         otp = generate_otp()
         print(otp, "otp")
@@ -105,8 +109,10 @@ def forget_password():
         # send mail to the mod for the otp
 
         return return_response(
-            HttpStatus.OK, status=StatusRes.SUCCESS, message="OTP sent to email",
-            email=email
+            HttpStatus.OK,
+            status=StatusRes.SUCCESS,
+            message="OTP sent to email",
+            email=email,
         )
     except Exception as e:
         print(traceback.format_exc(), "forget_password traceback")
@@ -114,7 +120,7 @@ def forget_password():
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
-            message="Network Error"
+            message="Network Error",
         )
 
 
@@ -128,20 +134,28 @@ def reset_password(email):
         confirm_password = data.get("confirm_password")
         if not otp:
             return return_response(
-                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="OTP is required"
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="OTP is required",
             )
         if not new_password:
             return return_response(
-                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="New password is required"
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="New password is required",
             )
         if not confirm_password:
             return return_response(
-                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Confirm password is required"
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Confirm password is required",
             )
 
         if new_password != confirm_password:
             return return_response(
-                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="Passwords do not match"
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="Passwords do not match",
             )
         if not valid_email(email):
             return return_response(
@@ -160,7 +174,9 @@ def reset_password(email):
 
         if mod.mod_session.otp_expires_at < datetime.now():
             return return_response(
-                HttpStatus.BAD_REQUEST, status=StatusRes.FAILED, message="OTP has expired"
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message="OTP has expired",
             )
 
         mod.update_password(new_password)
@@ -173,5 +189,5 @@ def reset_password(email):
         return return_response(
             HttpStatus.INTERNAL_SERVER_ERROR,
             status=StatusRes.FAILED,
-            message="Network Error"
+            message="Network Error",
         )
