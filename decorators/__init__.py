@@ -12,7 +12,7 @@ def super_admin_required(f):
         if current_user.is_super_admin:
             return f(*args, **kwargs)
         return return_response(
-            HttpStatus.UNAUTHORIZED, status=StatusRes.FAILED,
-            message="Unauthorized"
+            HttpStatus.UNAUTHORIZED, status=StatusRes.FAILED, message="Unauthorized"
         )
+
     return decorated_function
