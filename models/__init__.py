@@ -6,6 +6,7 @@ from sqlalchemy.ext.hybrid import hybrid_property
 import re
 import datetime
 from utils import hex_uuid
+import pprint
 
 # from datetime import datetime
 from datetime import datetime, timedelta, date
@@ -527,6 +528,7 @@ def edit_child(child_id, payload, remove=False):
 
 # update member
 def edit_member(member_id, payload):
+    pprint.pprint(payload)
     member = Member.query.filter_by(id=member_id).first()
     if not member:
         return False
@@ -581,7 +583,7 @@ def edit_member(member_id, payload):
             child_member = save_member(child)
             save_child(child_member.id, spouse.id, child["child_type"])
     db.session.commit()
-    return member
+    return None
 
 
 def get_children(spouse_id):
