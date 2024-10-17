@@ -298,7 +298,7 @@ class Spouse(db.Model):
             "husband": self.husband.to_dict() if self.husband else {},
             "wife": self.wife.to_dict() if self.wife else {},
         }
-        if member_id and member_id == self.other_spouses[0].member_related_to:
+        if member_id and self.other_spouses and member_id == self.other_spouses[0].member_related_to:
             return_dict["other_spouses"] = [
                 other_spouse.to_dict() for other_spouse in self.other_spouses
             ]
