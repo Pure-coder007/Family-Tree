@@ -575,6 +575,8 @@ def edit_member(member_id, payload):
         and not payload.get("other_spouses")
         and payload.get("children")
     ):
+        if not spouse:
+            return "This member has no spouse"
         for child in payload.get("children"):
             child_member = save_member(child)
             save_child(child_member.id, spouse.id, child["child_type"])
