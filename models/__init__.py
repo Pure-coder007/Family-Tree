@@ -100,6 +100,11 @@ class Member(db.Model):
             return self.spouse_as_wife[0].wife
         return None
 
+    # check if husband id and wife id is in spouse table
+    @hybrid_property
+    def spouse_as_husband_and_wife(self):
+        return self.husband_spouse and self.wife_spouse
+
     @hybrid_property
     def other_spouses(self):
         return self.other_spouses_as_member
@@ -147,6 +152,7 @@ class Member(db.Model):
             "birth_name": self.birth_name,
             "birth_place": self.birth_place,
             "story_line": self.story_line,
+            "has_spouse": has_spouse(self.id, self.gender.value),
         }
         return {key: value for key, value in member_dict.items() if value}
 
@@ -369,6 +375,17 @@ def create_mod(email, password, fullname, is_super_admin=False):
     db.session.commit()
     return mod
 
+
+def has_spouse(member_id, gender):
+    if gender == Gender.male:
+        # filter husband id
+        spouse = Spouse.query.filter_by(husband_id=member_id).first()
+        return True if spouse.wife_id else False
+    elif gender == Gender.female:
+        # filter wife id
+        spouse = Spouse.query.filter_by(wife_id=member_id).first()
+        return True if spouse.husband_id else False
+    return False
 
 # get spouse details
 def get_spouse_details(member_id):
