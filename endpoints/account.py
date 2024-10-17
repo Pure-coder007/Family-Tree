@@ -109,10 +109,10 @@ def create_fam_member():
 
         try:
             data["dob"] = (
-                datetime.datetime.strptime(dob, "%d-%m-%Y").date() if dob else None
+                datetime.datetime.strptime(dob, "%Y-%m-%d").date() if dob else None
             )
             data["deceased_at"] = (
-                datetime.datetime.strptime(deceased_at, "%d-%m-%Y").date()
+                datetime.datetime.strptime(deceased_at, "%Y-%m-%d").date()
                 if deceased_at
                 else None
             )
@@ -156,10 +156,10 @@ def edit_fam_member(member_id):
         data = request.get_json()
         try:
             if data.get("dob"):
-                data["dob"] = datetime.datetime.strptime(data["dob"], "%d-%m-%Y").date()
+                data["dob"] = datetime.datetime.strptime(data["dob"], "%Y-%m-%d").date()
             if data.get("deceased_at"):
                 data["deceased_at"] = datetime.datetime.strptime(
-                    data["deceased_at"], "%d-%m-%Y"
+                    data["deceased_at"], "%Y-%m-%d"
                 ).date()
         except ValueError as e:
             print(traceback.format_exc(), "create member traceback")
