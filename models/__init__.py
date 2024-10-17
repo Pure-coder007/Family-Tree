@@ -154,7 +154,8 @@ class Member(db.Model):
             "story_line": self.story_line,
             "has_spouse": has_spouse(self.id, self.gender.value),
         }
-        return {key: value for key, value in member_dict.items() if value}
+        return member_dict
+        # return {key: value for key, value in member_dict.items() if value}
 
     def __repr__(self):
         return f"<Member {self.last_name}>"
