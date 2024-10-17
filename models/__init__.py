@@ -138,10 +138,10 @@ class Member(db.Model):
             "gender": self.gender.value,
             "img_str": self.img_str,
             "phone_number": self.phone_number,
-            "dob": self.dob.strftime("%d-%b-%Y") if self.dob else None,
+            "dob": self.dob.strftime("%Y-%b-%d") if self.dob else None,
             "user_status": self.status.value,
             "deceased_at": (
-                self.deceased_at.strftime("%d-%b-%Y") if self.deceased_at else None
+                self.deceased_at.strftime("%Y-%b-%m") if self.deceased_at else None
             ),
             "occupation": self.occupation,
             "birth_name": self.birth_name,
@@ -382,11 +382,11 @@ def get_spouse_details(member_id):
 
 def save_member(payload):
     if payload.get("dob") and not isinstance(payload.get("dob"), date):
-        payload["dob"] = datetime.strptime(payload.get("dob"), "%d-%m-%Y").date()
+        payload["dob"] = datetime.strptime(payload.get("dob"), "%Y-%m-%d").date()
 
     if payload.get("deceased_at") and not isinstance(payload.get("deceased_at"), date):
         payload["deceased_at"] = datetime.strptime(
-            payload.get("deceased_at"), "%d-%m-%Y"
+            payload.get("deceased_at"), "%Y-%m-%d"
         ).date()
     member = Member(
         first_name=payload.get("first_name"),
