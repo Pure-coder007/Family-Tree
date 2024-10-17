@@ -208,7 +208,7 @@ def edit_fam_member(member_id):
             )
 
         res = edit_member(member_id, data)
-        if res and isinstance(res, str):
+        if res:
             return return_response(
                 HttpStatus.BAD_REQUEST,
                 status=StatusRes.FAILED,
