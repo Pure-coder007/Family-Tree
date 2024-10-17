@@ -207,7 +207,13 @@ def edit_fam_member(member_id):
                 message="Children must be an array",
             )
 
-        edit_member(member_id, data)
+        res = edit_member(member_id, data)
+        if res and isinstance(res, str):
+            return return_response(
+                HttpStatus.BAD_REQUEST,
+                status=StatusRes.FAILED,
+                message=res,
+            )
 
         return return_response(
             HttpStatus.OK,
