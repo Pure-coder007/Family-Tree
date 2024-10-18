@@ -378,11 +378,14 @@ def create_mod(email, password, fullname, is_super_admin=False):
 
 
 def has_spouse(member_id, gender):
-    if gender == Gender.male:
+    print("member_id", member_id, "gender", gender)
+    if gender == "Male":
+        print("This is a male")
         # filter husband id
         spouse = Spouse.query.filter_by(husband_id=member_id).first()
         return True if spouse.wife_id else False
-    elif gender == Gender.female:
+    elif gender == "Female":
+        print("This is a female")
         # filter wife id
         spouse = Spouse.query.filter_by(wife_id=member_id).first()
         return True if spouse.husband_id else False
