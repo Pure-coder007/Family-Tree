@@ -17,7 +17,7 @@
 #     SQLALCHEMY_TRACK_MODIFICATIONS = False
 #     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
 #     JWT_ACCESS_TOKEN_EXPIRES = 86400
-    
+
 
 # class DevelopmentConfig(Config):
 #     DEBUG = True
@@ -28,11 +28,6 @@
 # config_obj = {
 #     "development": DevelopmentConfig
 # }
-
-
-
-
-
 
 
 import os
@@ -49,12 +44,14 @@ app = Flask(__name__)
 # Base directory for the application
 base_dir = os.path.abspath(os.path.dirname(__file__))
 
+
 # Configuration class for the app
 class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
     JWT_ACCESS_TOKEN_EXPIRES = 86400
+
 
 # Development configuration
 class DevelopmentConfig(Config):
@@ -65,6 +62,7 @@ class DevelopmentConfig(Config):
         f"@{os.environ.get('DB_HOST')}:{os.environ.get('DB_PORT')}/{os.environ.get('DB_NAME')}"
     )
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
+
 
 # Config dictionary to choose the environment
 config_obj = {
@@ -77,11 +75,12 @@ app.config.from_object(config_obj['development'])
 # Initialize the SQLAlchemy object
 db = SQLAlchemy(app)
 
+
 # Example route
 @app.route('/')
 def home():
     return "Connected  successfully!"
 
+
 if __name__ == '__main__':
     app.run(debug=True)
-
