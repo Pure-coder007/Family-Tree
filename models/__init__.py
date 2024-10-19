@@ -383,11 +383,15 @@ def has_spouse(member_id, gender):
         print("This is a male")
         # filter husband id
         spouse = Spouse.query.filter_by(husband_id=member_id).first()
+        if not spouse:
+            return False
         return True if spouse.wife_id else False
     elif gender == "Female":
         print("This is a female")
         # filter wife id
         spouse = Spouse.query.filter_by(wife_id=member_id).first()
+        if not spouse:
+            return False
         return True if spouse.husband_id else False
     return False
 
