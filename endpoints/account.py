@@ -10,11 +10,7 @@ from models import (
     Moderators,
     get_all_members,
     create_member_with_spouse,
-    create_mod,
-    get_family_chain,
-    change_password,
-    get_all_mods,
-    update_mod,
+    recursive_delete,
     items_to_gallery,
     delete_gallery_item,
     Gallery,
@@ -147,6 +143,31 @@ def create_fam_member():
         )
 
 
+# delete member
+@account.route(f"{ACCOUNT_URL_PREFIX}/delete-member/<member_id>", methods=["DELETE"])
+@jwt_required()
+# @super_admin_required
+def delete_fam_member(member_id):
+    try:
+        member = get_one_fam_member(member_id, delete=True)
+        recursive_delete(member)
+        if not member:
+            return return_response(
+                HttpStatus.NOT_FOUND, status=StatusRes.FAILED, message="Member not found"
+            )
+        return return_response(
+            HttpStatus.OK, status=StatusRes.SUCCESS, message="Member deleted successfully"
+        )
+    except Exception as e:
+        print(traceback.format_exc(), "delete member traceback")
+        print(e, "delete member error")
+        return return_response(
+            HttpStatus.INTERNAL_SERVER_ERROR,
+            status=StatusRes.FAILED,
+            message="Network Error",
+        )
+
+
 # edit fam member
 @account.route(f"{ACCOUNT_URL_PREFIX}/edit-member/<member_id>", methods=["POST"])
 @jwt_required()
@@ -192,7 +213,7 @@ def edit_fam_member(member_id):
             )
 
         if data.get("other_spouses") and not isinstance(
-            data.get("other_spouses"), list
+                data.get("other_spouses"), list
         ):
             return return_response(
                 HttpStatus.BAD_REQUEST,
@@ -319,7 +340,7 @@ def get_one_fam(member_id):
 
 # create mod
 @account.route(f"{ACCOUNT_URL_PREFIX}/create-mod", methods=["POST"])
-@jwt_required()
+# @jwt_required()
 @super_admin_required
 def create_moderator():
     try:
