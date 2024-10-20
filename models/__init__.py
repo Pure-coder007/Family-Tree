@@ -121,18 +121,18 @@ class Member(db.Model):
         return self.other_spouses_as_related
 
     def __init__(
-        self,
-        first_name,
-        last_name,
-        gender,
-        img_str=None,
-        phone_number=None,
-        dob=None,
-        status=None,
-        deceased_at=None,
-        occupation=None,
-        birth_place=None,
-        birth_name=None,
+            self,
+            first_name,
+            last_name,
+            gender,
+            img_str=None,
+            phone_number=None,
+            dob=None,
+            status=None,
+            deceased_at=None,
+            occupation=None,
+            birth_place=None,
+            birth_name=None,
     ):
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
@@ -207,16 +207,16 @@ class Logo(db.Model):
     clan_name = db.Column(db.String(50), nullable=True)
 
     def __init__(
-        self,
-        logo_image,
-        logo_title,
-        full_name,
-        hero_image,
-        story_year,
-        ancestor_name,
-        hero_text,
-        directory_image,
-        clan_name,
+            self,
+            logo_image,
+            logo_title,
+            full_name,
+            hero_image,
+            story_year,
+            ancestor_name,
+            hero_text,
+            directory_image,
+            clan_name,
     ):
         self.logo_image = logo_image
         self.logo_title = logo_title
@@ -251,7 +251,8 @@ class Moderators(db.Model):
     is_super_admin = db.Column(db.Boolean, default=False)
     password = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(50), default="active")
-    mod_sessions = db.relationship("ModSession", backref="moderator", lazy=True, cascade="all, delete-orphan", uselist=False)
+    mod_sessions = db.relationship("ModSession", backref="moderator", lazy=True, cascade="all, delete-orphan",
+                                   uselist=False)
 
     def __repr__(self):
         return f"<Moderator {self.fullname}>"
@@ -413,6 +414,7 @@ def has_spouse(member_id, gender):
             return False
         return True if spouse.husband_id else False
     return False
+
 
 # get spouse details
 def get_spouse_details(member_id):
@@ -608,8 +610,8 @@ def edit_member(member_id, payload):
             husband_id, wife_id, payload.get("other_spouses"), payload.get("children")
         )
     spouse = (
-        Spouse.query.filter_by(husband_id=member.id).first()
-        or Spouse.query.filter_by(wife_id=member.id).first()
+            Spouse.query.filter_by(husband_id=member.id).first()
+            or Spouse.query.filter_by(wife_id=member.id).first()
     )
     if not payload.get("spouse") and payload.get("other_spouses"):
         for other_spouse in payload.get("other_spouses"):
@@ -622,9 +624,9 @@ def edit_member(member_id, payload):
                 spouse.id,
             )
     if (
-        not payload.get("spouse")
-        and not payload.get("other_spouses")
-        and payload.get("children")
+            not payload.get("spouse")
+            and not payload.get("other_spouses")
+            and payload.get("children")
     ):
         if not spouse:
             return "This member has no spouse"
@@ -881,15 +883,15 @@ def get_one_fam_member(member_id, delete=False):
 
 # Function to add or update logo items
 def add_or_update_logo(
-    logo_image,
-    logo_title,
-    full_name,
-    hero_image,
-    story_year,
-    ancestor_name,
-    hero_text,
-    directory_image,
-    clan_name,
+        logo_image,
+        logo_title,
+        full_name,
+        hero_image,
+        story_year,
+        ancestor_name,
+        hero_text,
+        directory_image,
+        clan_name,
 ):
     try:
         existing_logo = Logo.query.first()
@@ -949,6 +951,80 @@ def get_logo_details():
     return logo.to_dict()
 
 
+# def recursive_delete(member, visited=None):
+#     if visited is None:
+#         visited = set()
+#
+#     # If the member has already been visited, return to avoid infinite recursion
+#     if member.id in visited:
+#         return
+#
+#     # Mark the member as visited
+#     visited.add(member.id)
+#
+#     # If the member is a husband, recursively delete the wife and associated records
+#     if member.husband_spouse:
+#         for spouse in member.husband_spouse:
+#             print(spouse.wife_id, "the wife id")
+#             wife_member = Member.query.get(spouse.wife_id)
+#             print(wife_member, "the wife member")
+#             if wife_member:
+#                 children = get_children2(spouse.id)  # Use the get_children function to fetch children
+#
+#                 for child in children:
+#                     child_member = child.member
+#                     print(child_member, "child_member")
+#                     if child_member:
+#                         db.session.delete(child)
+#                         db.session.delete(child_member)
+#                         db.session.commit()
+#                         recursive_delete(child_member, visited)
+#                 db.session.delete(wife_member)
+#                 # recursive_delete(wife_member, visited)  # Recursively delete the wife and her records
+#             db.session.delete(spouse)  # Delete the spouse record where the member is the husband
+#
+#     # If the member is a wife, recursively delete the husband and associated records
+#     if member.wife_spouse:
+#         for spouse in member.wife_spouse:
+#             husband_member = Member.query.get(spouse.husband_id)
+#             print(husband_member, "husband_member")
+#             if husband_member:
+#                 children = get_children2(spouse.id)  # Use the get_children function to fetch children
+#
+#                 for child in children:
+#                     child_member = child.member
+#                     print(child_member, "child_member")
+#                     if child_member:
+#                         db.session.delete(child)
+#                         db.session.delete(child_member)
+#                         db.session.commit()
+#                         recursive_delete(child_member, visited)
+#                 db.session.delete(husband_member)
+#                 # recursive_delete(husband_member, visited)  # Recursively delete the husband and his records
+#             db.session.delete(spouse)  # Delete the spouse record where the member is the wife
+#
+#     # Recursively delete other spouses linked to the member
+#     if member.other_spouses2:
+#         print("yes it exist", member.other_spouses2)
+#         for other_spouse in member.other_spouses2:
+#             # Use member_id to get the related member (primary member in the relationship)
+#             spouse_member = Member.query.filter_by(id=other_spouse.member_id).first()
+#             print(spouse_member, "other spouse_member")
+#             if spouse_member:
+#                 db.session.delete(spouse_member)
+#                 recursive_delete(spouse_member, visited)  # Recursively delete the member linked as the other spouse
+#             db.session.delete(other_spouse)  # Delete the other_spouse record
+#
+#     # Finally, delete the member
+#     db.session.delete(member)
+#
+#     # Commit changes to the database after all related records are deleted
+#     db.session.commit()
+#     print("deleted")
+#
+#     return True
+
+
 def recursive_delete(member, visited=None):
     if visited is None:
         visited = set()
@@ -960,65 +1036,43 @@ def recursive_delete(member, visited=None):
     # Mark the member as visited
     visited.add(member.id)
 
-    # If the member is a husband, recursively delete the wife and associated records
+    # Function to handle spouse and child deletion logic
+    def delete_spouse_and_children(spouse_id, spouse_type):
+        spouse_member = Member.query.get(spouse_id)
+        if spouse_member:
+            children = get_children2(spouse_type.id)  # Get the children linked to the spouse
+            for child in children:
+                child_member = child.member
+                if child_member:
+                    db.session.delete(child)  # Delete the child record
+                    db.session.delete(child_member)  # Delete the child member
+                    recursive_delete(child_member, visited)
+            db.session.delete(spouse_member)  # Delete the spouse member
+
+    # Process husband-spouse relationships
     if member.husband_spouse:
         for spouse in member.husband_spouse:
-            print(spouse.wife_id, "the wife id")
-            wife_member = Member.query.get(spouse.wife_id)
-            print(wife_member, "the wife member")
-            if wife_member:
-                children = get_children2(spouse.id)  # Use the get_children function to fetch children
+            delete_spouse_and_children(spouse.wife_id, spouse)
+            db.session.delete(spouse)  # Delete the spouse record
 
-                for child in children:
-                    child_member = child.member
-                    print(child_member, "child_member")
-                    if child_member:
-                        db.session.delete(child)
-                        db.session.delete(child_member)
-                        db.session.commit()
-                        recursive_delete(child_member, visited)
-                db.session.delete(wife_member)
-                # recursive_delete(wife_member, visited)  # Recursively delete the wife and her records
-            db.session.delete(spouse)  # Delete the spouse record where the member is the husband
-
-    # If the member is a wife, recursively delete the husband and associated records
+    # Process wife-spouse relationships
     if member.wife_spouse:
         for spouse in member.wife_spouse:
-            husband_member = Member.query.get(spouse.husband_id)
-            print(husband_member, "husband_member")
-            if husband_member:
-                children = get_children2(spouse.id)  # Use the get_children function to fetch children
+            delete_spouse_and_children(spouse.husband_id, spouse)
+            db.session.delete(spouse)  # Delete the spouse record
 
-                for child in children:
-                    child_member = child.member
-                    print(child_member, "child_member")
-                    if child_member:
-                        db.session.delete(child)
-                        db.session.delete(child_member)
-                        db.session.commit()
-                        recursive_delete(child_member, visited)
-                db.session.delete(husband_member)
-                # recursive_delete(husband_member, visited)  # Recursively delete the husband and his records
-            db.session.delete(spouse)  # Delete the spouse record where the member is the wife
-
-    # Recursively delete other spouses linked to the member
+    # Process other spouses (other_spouses2)
     if member.other_spouses2:
-        print("yes it exist", member.other_spouses2)
         for other_spouse in member.other_spouses2:
-            # Use member_id to get the related member (primary member in the relationship)
-            spouse_member = Member.query.filter_by(id=other_spouse.member_id).first()
-            print(spouse_member, "other spouse_member")
+            spouse_member = Member.query.get(other_spouse.member_id)
             if spouse_member:
                 db.session.delete(spouse_member)
-                recursive_delete(spouse_member, visited)  # Recursively delete the member linked as the other spouse
-            db.session.delete(other_spouse)  # Delete the other_spouse record
+                recursive_delete(spouse_member, visited)
+            db.session.delete(other_spouse)  # Delete the other spouse record
 
-    # Finally, delete the member
+    # Delete the main member and commit changes in one transaction
     db.session.delete(member)
-
-    # Commit changes to the database after all related records are deleted
     db.session.commit()
-    print("deleted")
 
     return True
 
