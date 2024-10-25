@@ -350,6 +350,7 @@ def create_moderator():
         password = data.get("password")
         is_super_admin = data.get("is_super_admin", False)
         fullname = data.get("fullname")
+        role = data.get("role")
 
         if not email:
             return return_response(
@@ -385,7 +386,7 @@ def create_moderator():
                 status=StatusRes.FAILED,
                 message="Email already exists",
             )
-        create_mod(email, password, fullname, is_super_admin)
+        create_mod(email, password, fullname, role, is_super_admin)
 
         return return_response(
             HttpStatus.OK, status=StatusRes.SUCCESS, message="Moderator created"
