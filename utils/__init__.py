@@ -7,6 +7,7 @@ import hashlib
 import base64
 from io import BytesIO
 import time
+import re
 
 
 def hex_uuid():
@@ -63,3 +64,11 @@ def validate_request_data(data, required_fields):
         if not data.get(field):
             return False, f"{field} is required"
     return True, None
+
+
+def extract_public_id(url):
+    # Match everything between 'upload/' and the file extension
+    match = re.search(r'upload\/(?:v\d+\/)?(.+?)\.[\w]+$', url)
+    if match:
+        return match.group(1)
+    return None

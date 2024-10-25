@@ -5,7 +5,7 @@ from sqlalchemy import Enum as SQLAlchemyEnum
 from sqlalchemy.ext.hybrid import hybrid_property
 import re
 import datetime
-from utils import hex_uuid
+from utils import hex_uuid, extract_public_id
 import pprint
 from sqlalchemy.orm import configure_mappers, mapper
 
@@ -153,6 +153,7 @@ class Member(db.Model):
             "last_name": self.last_name.title(),
             "gender": self.gender.value,
             "img_str": self.img_str,
+            "public_id": extract_public_id(self.img_str) if self.img_str else None,
             "phone_number": self.phone_number,
             "dob": self.dob.strftime("%Y-%m-%d") if self.dob else None,
             "user_status": self.status.value,
