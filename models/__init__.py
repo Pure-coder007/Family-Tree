@@ -249,6 +249,7 @@ class Moderators(db.Model):
     fullname = db.Column(db.String(150), nullable=False)
     email = db.Column(db.String(50), nullable=False)
     is_super_admin = db.Column(db.Boolean, default=False)
+    role = db.Column(db.String(50), default="moderator")
     password = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(50), default="active")
     mod_sessions = db.relationship("ModSession", backref="moderator", lazy=True, cascade="all, delete-orphan",
@@ -263,6 +264,7 @@ class Moderators(db.Model):
             "fullname": self.fullname,
             "email": self.email,
             "is_super_admin": self.is_super_admin,
+            "role": self.role,
             "status": self.status,
         }
 
@@ -385,12 +387,13 @@ class Child(db.Model):
         }
 
 
-def create_mod(email, password, fullname, is_super_admin=False):
+def create_mod(email, password, fullname, role, is_super_admin=False):
     mod = Moderators(
         email=email,
         password=hasher.hash(password),
         is_super_admin=is_super_admin,
         fullname=fullname,
+        role=role
     )
     db.session.add(mod)
     db.session.commit()
@@ -798,6 +801,7 @@ def update_mod(mod_id, delete=False, **kwargs):
     mod.is_super_admin = kwargs.get("is_super_admin") or mod.is_super_admin
     mod.status = kwargs.get("status") or mod.status
     mod.fullname = kwargs.get("fullname") or mod.fullname
+    mod.role = kwargs.get("role") or mod.role
     # hash password
 
     db.session.commit()
