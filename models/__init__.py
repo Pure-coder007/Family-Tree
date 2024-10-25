@@ -154,10 +154,10 @@ class Member(db.Model):
             "gender": self.gender.value,
             "img_str": self.img_str,
             "phone_number": self.phone_number,
-            "dob": self.dob.strftime("%Y-%b-%d") if self.dob else None,
+            "dob": self.dob.strftime("%Y-%m-%d") if self.dob else None,
             "user_status": self.status.value,
             "deceased_at": (
-                self.deceased_at.strftime("%Y-%b-%m") if self.deceased_at else None
+                self.deceased_at.strftime("%Y-%m-%d") if self.deceased_at else None
             ),
             "occupation": self.occupation,
             "birth_name": self.birth_name,
