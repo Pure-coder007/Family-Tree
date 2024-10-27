@@ -26,6 +26,7 @@ class RelationshipType(Enum):
     partner = "Partner"
     ex_partner = "Ex-Partner"
     secondary_wife = "Secondary Wife"
+    mistress = "Mistress"
 
 
 class ChildType(Enum):
