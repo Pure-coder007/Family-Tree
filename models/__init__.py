@@ -177,6 +177,7 @@ class Member(db.Model):
             "birth_place": self.birth_place,
             "story_line": self.story_line,
             "has_spouse": has_spouse(self.id, self.gender.value),
+            "only_child": only_child_create(self),
         }
         return member_dict
         # return {key: value for key, value in member_dict.items() if value}
@@ -730,6 +731,14 @@ def get_related_spouse(member_id, member_relate_id):
     return {}
 
 
+def only_child_create(member):
+    if member.other_spouses:
+        return True
+    if member.spouse and member.gender == Gender.female:
+        return True
+    return False
+
+
 def get_family_chain(member_id):
     member = Member.query.filter_by(id=member_id).first()
     if not member:
@@ -749,9 +758,6 @@ def get_family_chain(member_id):
         family_chain["spouse"] = spouse
         family_chain["children"] = children
 
-        # if the member is a female
-        if member.gender == Gender.female:
-            family_chain["only_child"] = True
 
         # remove the child key
         if "child" in family_chain:
@@ -763,7 +769,6 @@ def get_family_chain(member_id):
         )
         family_chain["spouse"] = spouse
         family_chain["children"] = get_other_spouse_children(member_id)
-        family_chain["only_child"] = True
 
     return family_chain
 
