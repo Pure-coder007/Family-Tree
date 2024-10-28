@@ -752,7 +752,8 @@ def get_family_chain(member_id):
 
 def get_other_spouse_children(member_id):
     other_spouse_children = Child.query.filter_by(mother_id=member_id).all()
-    return other_spouse_children.to_dict()
+    return [child.to_dict() for child in other_spouse_children]
+
 
 def verify_mod_login(email, password):
     mod = Moderators.query.filter_by(email=email).first()
