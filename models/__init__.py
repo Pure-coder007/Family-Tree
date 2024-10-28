@@ -661,8 +661,8 @@ def edit_member(member_id, payload):
             and not payload.get("other_spouses")
             and payload.get("children")
     ):
-        if member.other_spouses_as_member:
-            spouse = get_spouse_related_to_other_spouse(member.other_spouses_as_member[0].member_related_to)
+        if member.other_spouses:
+            spouse = get_spouse_related_to_other_spouse(member.other_spouses[0].member_related_to)
             for child in payload.get("children"):
                 child_member = save_member(child)
                 save_child(child_member.id, spouse.id, child["child_type"], member.id)
@@ -749,6 +749,10 @@ def get_family_chain(member_id):
         family_chain["spouse"] = spouse
         family_chain["children"] = children
 
+        # if the member is a female
+        if member.gender == Gender.female:
+            family_chain["only_child"] = True
+
         # remove the child key
         if "child" in family_chain:
             del family_chain["child"]
@@ -759,6 +763,7 @@ def get_family_chain(member_id):
         )
         family_chain["spouse"] = spouse
         family_chain["children"] = get_other_spouse_children(member_id)
+        family_chain["only_child"] = True
 
     return family_chain
 
