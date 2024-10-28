@@ -661,6 +661,12 @@ def edit_member(member_id, payload):
             and not payload.get("other_spouses")
             and payload.get("children")
     ):
+        if member.other_spouses_as_member:
+            spouse = get_spouse_related_to_other_spouse(member.other_spouses_as_member[0].member_related_to)
+            for child in payload.get("children"):
+                child_member = save_member(child)
+                save_child(child_member.id, spouse.id, child["child_type"], member.id)
+            return None
         if not spouse:
             return "This member has no spouse"
         for child in payload.get("children"):
@@ -670,11 +676,18 @@ def edit_member(member_id, payload):
     return None
 
 
+def get_spouse_related_to_other_spouse(member_related_to):
+    spouse = Spouse.query.filter(
+        (Spouse.husband_id == member_related_to) | (Spouse.wife_id == member_related_to)
+    ).first()
+    return spouse
+
+
 def get_children(spouse_id, spouse_inst, member_id):
     children = Child.query.filter_by(spouse_id=spouse_id).all()
     if spouse_inst.wife_id == member_id:
         print("spouse is wife and member")
-        all_children = [child.to_dict() for child in children if child.mother_id and child.mother_id != spouse_inst.wife_id]
+        all_children = [child.to_dict() for child in children if child.mother_id is None]
     else:
         all_children = [child.to_dict() for child in children]
     return all_children
