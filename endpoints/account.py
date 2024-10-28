@@ -340,7 +340,7 @@ def get_one_fam(member_id):
 
 # create mod
 @account.route(f"{ACCOUNT_URL_PREFIX}/create-mod", methods=["POST"])
-# @jwt_required()
+@jwt_required()
 @super_admin_required
 def create_moderator():
     try:
