@@ -329,7 +329,7 @@ def get_one_fam(member_id):
             status=StatusRes.SUCCESS,
             message="Member retrieved",
             **member,
-            **other_spouse
+            other_spouse_list=other_spouse
         )
     except Exception as e:
         print(traceback.format_exc(), "get one member traceback")
