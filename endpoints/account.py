@@ -22,6 +22,7 @@ from models import (
     get_one_fam_member,
     add_or_update_logo,
     get_logo_details,
+    get_members_other_spouses
 )
 from decorators import super_admin_required
 import datetime
@@ -316,6 +317,7 @@ def get_one_member(member_id):
 def get_one_fam(member_id):
     try:
         member = get_one_fam_member(member_id)
+        other_spouse = get_members_other_spouses(member_id)
         if not member:
             return return_response(
                 HttpStatus.NOT_FOUND,
