@@ -391,7 +391,7 @@ class OtherSpouse(db.Model):
 
     def to_dict2(self):
         return {
-            "member": self.member.to_dict2(),
+            **self.member.to_dict2(),
             "relationship_type": self.relationship_type.value
         }
 
