@@ -170,6 +170,15 @@ class Member(db.Model):
         return member_dict
         # return {key: value for key, value in member_dict.items() if value}
 
+    def to_dict2(self):
+        member_dict = {
+            "id": self.id,
+            "first_name": self.first_name.title(),
+            "last_name": self.last_name.title(),
+            "gender": self.gender.value
+        }
+        return member_dict
+
     def __repr__(self):
         return f"<Member {self.last_name}>"
 
@@ -369,12 +378,19 @@ class OtherSpouse(db.Model):
             ),
         }
 
+    def to_dict2(self):
+        return {
+            "member": self.member.to_dict2(),
+            "relationship_type": self.relationship_type.value
+        }
+
 
 class Child(db.Model):
     __tablename__ = "child"
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
     member_id = db.Column(db.String(50), db.ForeignKey("member.id"))
     spouse_id = db.Column(db.String(50), db.ForeignKey("spouse.id"))
+    mother_id = db.Column(db.String(50), db.ForeignKey("spouse.id"), nullable=True)
     child_type = db.Column(SQLAlchemyEnum(ChildType))
 
     def to_dict(self):
@@ -427,8 +443,8 @@ def get_spouse_details(member_id):
         db.or_(Spouse.husband_id == member_id, Spouse.wife_id == member_id)
     ).first()
     if spouse:
-        return spouse.to_dict(member_id)
-    return {}
+        return spouse.to_dict(member_id), spouse
+    return {}, spouse
 
 
 def save_member(payload):
@@ -541,7 +557,7 @@ def save_spouse_details(husband_id, wife_id, other_spouses, children):
     if children:
         for child in children:
             child_member = save_member(child)
-            save_child(child_member.id, spouse.id, child["child_type"])
+            save_child(child_member.id, spouse.id, child["child_type"], child.get("mother_id", None))
     return spouse, None
 
 
@@ -557,11 +573,12 @@ def save_other_spouses(member_id, member_related_to, relationship_type, spouse_i
     return other_spouse
 
 
-def save_child(member_id, spouse_id, child_type):
+def save_child(member_id, spouse_id, child_type, mother_id):
     child = Child(
         member_id=member_id,
         spouse_id=spouse_id,
         child_type=ChildType(child_type.title()),
+        mother_id=mother_id,
     )
     db.session.add(child)
     db.session.commit()
@@ -637,14 +654,18 @@ def edit_member(member_id, payload):
             return "This member has no spouse"
         for child in payload.get("children"):
             child_member = save_member(child)
-            save_child(child_member.id, spouse.id, child["child_type"])
+            save_child(child_member.id, spouse.id, child["child_type"], child.get("mother_id", None))
     db.session.commit()
     return None
 
 
-def get_children(spouse_id):
+def get_children(spouse_id, spouse_inst, member_id):
     children = Child.query.filter_by(spouse_id=spouse_id).all()
-    all_children = [child.to_dict() for child in children]
+    if spouse_inst.wife_id == member_id:
+        print("spouse is wife and member")
+        all_children = [child.to_dict() for child in children if child.mother_id and child.mother_id != spouse_inst.wife_id]
+    else:
+        all_children = [child.to_dict() for child in children]
     return all_children
 
 
@@ -699,8 +720,8 @@ def get_family_chain(member_id):
     # get spouse details
     if member.spouse:
         print("gotten")
-        spouse = get_spouse_details(member_id)
-        children = get_children(spouse["id"])
+        spouse, spouse_inst = get_spouse_details(member_id)
+        children = get_children(spouse["id"], spouse_inst, member_id)
         family_chain["spouse"] = spouse
         family_chain["children"] = children
 
@@ -713,9 +734,14 @@ def get_family_chain(member_id):
             member_id, member.other_spouses[0].member_related_to
         )
         family_chain["spouse"] = spouse
+        family_chain["children"] = get_other_spouse_children(member_id)
 
     return family_chain
 
+
+def get_other_spouse_children(member_id):
+    other_spouse_children = Child.query.filter_by(mother_id=member_id).all()
+    return other_spouse_children.to_dict()
 
 def verify_mod_login(email, password):
     mod = Moderators.query.filter_by(email=email).first()
@@ -835,6 +861,11 @@ def get_all_mods(page, per_page, fullname, email):
     )
 
     return mods
+
+
+def get_members_other_spouses(member_id):
+    others = OtherSpouse.query.filter_by(member_related_to=member_id).all()
+    return [other.to_dict2() for other in others]
 
 
 # Add images, event_year, event_name
