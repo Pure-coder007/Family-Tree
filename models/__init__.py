@@ -7,7 +7,7 @@ import re
 import datetime
 from utils import hex_uuid, extract_public_id
 import pprint
-from sqlalchemy.orm import configure_mappers, mapper
+from sqlalchemy.orm import configure_mappers, mapper, foreign
 
 # from datetime import datetime
 from datetime import datetime, timedelta, date
@@ -62,7 +62,18 @@ class Member(db.Model):
     updated_at = db.Column(
         db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now()
     )
-    child = db.relationship("Child", backref="member", lazy=True, uselist=False, cascade="all, delete, delete-orphan")
+    child = db.relationship("Child", foreign_keys="[Child.member_id]",
+                            backref="member", overlaps="child_as_member", lazy=True, uselist=False,
+                            cascade="all, delete, delete-orphan")
+    child_owner = db.relationship(
+        "Child",
+        foreign_keys="[Child.mother_id]",
+        backref="mother",
+        overlaps="child",
+        lazy=True,
+        uselist=False,
+        cascade="all, delete, delete-orphan",
+    )
     # Relationships for spouses (as a husband and as a wife)
     husband_spouse = db.relationship(
         "Spouse",
@@ -390,7 +401,7 @@ class Child(db.Model):
     id = db.Column(db.String(50), primary_key=True, default=hex_uuid)
     member_id = db.Column(db.String(50), db.ForeignKey("member.id"))
     spouse_id = db.Column(db.String(50), db.ForeignKey("spouse.id"))
-    mother_id = db.Column(db.String(50), db.ForeignKey("spouse.id"), nullable=True)
+    mother_id = db.Column(db.String(50), db.ForeignKey("member.id"), nullable=True)
     child_type = db.Column(SQLAlchemyEnum(ChildType))
 
     def to_dict(self):
