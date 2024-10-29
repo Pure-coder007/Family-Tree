@@ -706,9 +706,12 @@ def get_other_spouses(spouse_id):
     return all_other_spouses
 
 
-def get_parents(spouse_id):
+def get_parents(spouse_id, child_mother_id):
     parents = Spouse.query.filter_by(id=spouse_id).first()
     if parents:
+        if child_mother_id:
+            mother = Member.query.filter_by(id=child_mother_id).first()
+            return {"father": parents.husband.to_dict(), "mother": mother.to_dict()}
         return {"father": parents.husband.to_dict(), "mother": parents.wife.to_dict()}
     return None
 
@@ -747,7 +750,7 @@ def get_family_chain(member_id):
     family_chain = {}
     # check if member has parents/ he's a child
     if member.child:
-        parent = get_parents(member.child.spouse_id)
+        parent = get_parents(member.child.spouse_id, member.child.mother_id)
         family_chain["parents"] = parent
         family_chain["child"] = member.to_dict()
 
