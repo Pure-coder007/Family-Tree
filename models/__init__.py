@@ -672,7 +672,8 @@ def edit_member(member_id, payload):
             return "This member has no spouse"
         for child in payload.get("children"):
             child_member = save_member(child)
-            save_child(child_member.id, spouse.id, child["child_type"], child.get("mother_id", None))
+            mother_id = None if child.get("mother_id") == "" else child["mother_id"]
+            save_child(child_member.id, spouse.id, child["child_type"], mother_id)
     db.session.commit()
     return None
 
