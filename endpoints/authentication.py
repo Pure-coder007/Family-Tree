@@ -59,6 +59,7 @@ def login():
             "email": mod.email,
             "is_super_admin": mod.is_super_admin,
             "status": mod.status,
+            "role": mod.role,
         }
 
         return return_response(
