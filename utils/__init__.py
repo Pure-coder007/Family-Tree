@@ -15,12 +15,9 @@ def hex_uuid():
 
 
 def return_response(status_code, status=None, message=None, **data):
-    res_data = {
-        "status": status,
-        "message": message
-    }
+    res_data = {"status": status, "message": message}
     res_data.update(data)
-    
+
     return jsonify(res_data), status_code
 
 
@@ -48,10 +45,14 @@ def convert_binary(base64_file):
 
 def generate_signature(params_to_sign, api_secret):
     try:
-        params_to_sign['timestamp'] = int(time.time())
-        sorted_params = '&'.join([f'{k}={params_to_sign[k]}' for k in sorted(params_to_sign)])
-        to_sign = f'{sorted_params}{api_secret}'
-        signature = hmac.new(api_secret.encode('utf-8'), to_sign.encode('utf-8'), hashlib.sha1).hexdigest()
+        params_to_sign["timestamp"] = int(time.time())
+        sorted_params = "&".join(
+            [f"{k}={params_to_sign[k]}" for k in sorted(params_to_sign)]
+        )
+        to_sign = f"{sorted_params}{api_secret}"
+        signature = hmac.new(
+            api_secret.encode("utf-8"), to_sign.encode("utf-8"), hashlib.sha1
+        ).hexdigest()
         print(signature, "signature from generate_signature")
         return signature
     except Exception as e:
@@ -68,7 +69,7 @@ def validate_request_data(data, required_fields):
 
 def extract_public_id(url):
     # Match everything between 'upload/' and the file extension
-    match = re.search(r'upload\/(?:v\d+\/)?(.+?)\.[\w]+$', url)
+    match = re.search(r"upload\/(?:v\d+\/)?(.+?)\.[\w]+$", url)
     if match:
         return match.group(1)
     return None
