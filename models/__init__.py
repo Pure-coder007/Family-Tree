@@ -62,9 +62,15 @@ class Member(db.Model):
     updated_at = db.Column(
         db.DateTime, server_default=db.func.now(), server_onupdate=db.func.now()
     )
-    child = db.relationship("Child", foreign_keys="[Child.member_id]",
-                            backref="member", overlaps="child_as_member", lazy=True, uselist=False,
-                            cascade="all, delete, delete-orphan")
+    child = db.relationship(
+        "Child",
+        foreign_keys="[Child.member_id]",
+        backref="member",
+        overlaps="child_as_member",
+        lazy=True,
+        uselist=False,
+        cascade="all, delete, delete-orphan",
+    )
     child_owner = db.relationship(
         "Child",
         foreign_keys="[Child.mother_id]",
@@ -133,18 +139,18 @@ class Member(db.Model):
         return self.other_spouses_as_related
 
     def __init__(
-            self,
-            first_name,
-            last_name,
-            gender,
-            img_str=None,
-            phone_number=None,
-            dob=None,
-            status=None,
-            deceased_at=None,
-            occupation=None,
-            birth_place=None,
-            birth_name=None,
+        self,
+        first_name,
+        last_name,
+        gender,
+        img_str=None,
+        phone_number=None,
+        dob=None,
+        status=None,
+        deceased_at=None,
+        occupation=None,
+        birth_place=None,
+        birth_name=None,
     ):
         self.first_name = first_name.lower()
         self.last_name = last_name.lower()
@@ -187,7 +193,7 @@ class Member(db.Model):
             "id": self.id,
             "first_name": self.first_name.title(),
             "last_name": self.last_name.title(),
-            "gender": self.gender.value
+            "gender": self.gender.value,
         }
         return member_dict
 
@@ -230,16 +236,16 @@ class Logo(db.Model):
     clan_name = db.Column(db.String(50), nullable=True)
 
     def __init__(
-            self,
-            logo_image,
-            logo_title,
-            full_name,
-            hero_image,
-            story_year,
-            ancestor_name,
-            hero_text,
-            directory_image,
-            clan_name,
+        self,
+        logo_image,
+        logo_title,
+        full_name,
+        hero_image,
+        story_year,
+        ancestor_name,
+        hero_text,
+        directory_image,
+        clan_name,
     ):
         self.logo_image = logo_image
         self.logo_title = logo_title
@@ -275,8 +281,13 @@ class Moderators(db.Model):
     role = db.Column(db.String(50), default="moderator")
     password = db.Column(db.Text, nullable=False)
     status = db.Column(db.String(50), default="active")
-    mod_sessions = db.relationship("ModSession", backref="moderator", lazy=True, cascade="all, delete-orphan",
-                                   uselist=False)
+    mod_sessions = db.relationship(
+        "ModSession",
+        backref="moderator",
+        lazy=True,
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
 
     def __repr__(self):
         return f"<Moderator {self.fullname}>"
@@ -342,7 +353,11 @@ class Spouse(db.Model):
             "husband": self.husband.to_dict() if self.husband else {},
             "wife": self.wife.to_dict() if self.wife else {},
         }
-        if member_id and self.other_spouses and member_id == self.other_spouses[0].member_related_to:
+        if (
+            member_id
+            and self.other_spouses
+            and member_id == self.other_spouses[0].member_related_to
+        ):
             return_dict["other_spouses"] = [
                 other_spouse.to_dict() for other_spouse in self.other_spouses
             ]
@@ -393,7 +408,7 @@ class OtherSpouse(db.Model):
     def to_dict2(self):
         return {
             **self.member.to_dict2(),
-            "relationship_type": self.relationship_type.value
+            "relationship_type": self.relationship_type.value,
         }
 
 
@@ -413,7 +428,7 @@ class Child(db.Model):
             "id": self.id,
             "member_id": self.member_id,
             "spouse_id": self.spouse_id,
-            "child_type": self.child_type.value
+            "child_type": self.child_type.value,
         }
 
 
@@ -423,7 +438,7 @@ def create_mod(email, password, fullname, role, is_super_admin=False):
         password=hasher.hash(password),
         is_super_admin=is_super_admin,
         fullname=fullname,
-        role=role
+        role=role,
     )
     db.session.add(mod)
     db.session.commit()
@@ -569,7 +584,12 @@ def save_spouse_details(husband_id, wife_id, other_spouses, children):
     if children:
         for child in children:
             child_member = save_member(child)
-            save_child(child_member.id, spouse.id, child["child_type"], child.get("mother_id", None))
+            save_child(
+                child_member.id,
+                spouse.id,
+                child["child_type"],
+                child.get("mother_id", None),
+            )
     return spouse, None
 
 
@@ -644,8 +664,8 @@ def edit_member(member_id, payload):
             husband_id, wife_id, payload.get("other_spouses"), payload.get("children")
         )
     spouse = (
-            Spouse.query.filter_by(husband_id=member.id).first()
-            or Spouse.query.filter_by(wife_id=member.id).first()
+        Spouse.query.filter_by(husband_id=member.id).first()
+        or Spouse.query.filter_by(wife_id=member.id).first()
     )
     if not payload.get("spouse") and payload.get("other_spouses"):
         for other_spouse in payload.get("other_spouses"):
@@ -658,12 +678,14 @@ def edit_member(member_id, payload):
                 spouse.id,
             )
     if (
-            not payload.get("spouse")
-            and not payload.get("other_spouses")
-            and payload.get("children")
+        not payload.get("spouse")
+        and not payload.get("other_spouses")
+        and payload.get("children")
     ):
         if member.other_spouses:
-            spouse = get_spouse_related_to_other_spouse(member.other_spouses[0].member_related_to)
+            spouse = get_spouse_related_to_other_spouse(
+                member.other_spouses[0].member_related_to
+            )
             for child in payload.get("children"):
                 child_member = save_member(child)
                 save_child(child_member.id, spouse.id, child["child_type"], member.id)
@@ -689,7 +711,9 @@ def get_children(spouse_id, spouse_inst, member_id):
     children = Child.query.filter_by(spouse_id=spouse_id).all()
     if spouse_inst.wife_id == member_id:
         print("spouse is wife and member")
-        all_children = [child.to_dict() for child in children if child.mother_id is None]
+        all_children = [
+            child.to_dict() for child in children if child.mother_id is None
+        ]
     else:
         all_children = [child.to_dict() for child in children]
     return all_children
@@ -761,7 +785,6 @@ def get_family_chain(member_id):
         children = get_children(spouse["id"], spouse_inst, member_id)
         family_chain["spouse"] = spouse
         family_chain["children"] = children
-
 
         # remove the child key
         if "child" in family_chain:
@@ -959,15 +982,15 @@ def get_one_fam_member(member_id, delete=False):
 
 # Function to add or update logo items
 def add_or_update_logo(
-        logo_image,
-        logo_title,
-        full_name,
-        hero_image,
-        story_year,
-        ancestor_name,
-        hero_text,
-        directory_image,
-        clan_name,
+    logo_image,
+    logo_title,
+    full_name,
+    hero_image,
+    story_year,
+    ancestor_name,
+    hero_text,
+    directory_image,
+    clan_name,
 ):
     try:
         existing_logo = Logo.query.first()
@@ -1116,7 +1139,9 @@ def recursive_delete(member, visited=None):
     def delete_spouse_and_children(spouse_id, spouse_type):
         spouse_member = Member.query.get(spouse_id)
         if spouse_member:
-            children = get_children2(spouse_type.id)  # Get the children linked to the spouse
+            children = get_children2(
+                spouse_type.id
+            )  # Get the children linked to the spouse
             for child in children:
                 child_member = child.member
                 if child_member:
