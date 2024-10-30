@@ -22,7 +22,7 @@ from models import (
     get_one_fam_member,
     add_or_update_logo,
     get_logo_details,
-    get_members_other_spouses
+    get_members_other_spouses,
 )
 from decorators import super_admin_required
 import datetime
@@ -154,10 +154,14 @@ def delete_fam_member(member_id):
         recursive_delete(member)
         if not member:
             return return_response(
-                HttpStatus.NOT_FOUND, status=StatusRes.FAILED, message="Member not found"
+                HttpStatus.NOT_FOUND,
+                status=StatusRes.FAILED,
+                message="Member not found",
             )
         return return_response(
-            HttpStatus.OK, status=StatusRes.SUCCESS, message="Member deleted successfully"
+            HttpStatus.OK,
+            status=StatusRes.SUCCESS,
+            message="Member deleted successfully",
         )
     except Exception as e:
         print(traceback.format_exc(), "delete member traceback")
@@ -214,7 +218,7 @@ def edit_fam_member(member_id):
             )
 
         if data.get("other_spouses") and not isinstance(
-                data.get("other_spouses"), list
+            data.get("other_spouses"), list
         ):
             return return_response(
                 HttpStatus.BAD_REQUEST,
@@ -329,7 +333,7 @@ def get_one_fam(member_id):
             status=StatusRes.SUCCESS,
             message="Member retrieved",
             **member,
-            other_spouse_list=other_spouse
+            other_spouse_list=other_spouse,
         )
     except Exception as e:
         print(traceback.format_exc(), "get one member traceback")
